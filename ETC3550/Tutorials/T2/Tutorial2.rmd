@@ -1,0 +1,75 @@
+```{r}
+library(fpp3)
+setwd("C:/Users/chela/OneDrive - Monash University/ETC3550/Tutorials/T2")
+```
+```{r}
+gafa_stock %>% autoplot(Close)
+x <- gafa_stock
+PBS %>%
+    filter(ATC2 == "A10") %>%
+    summarise(TotCost = sum(Cost)) %>%
+    autoplot()
+
+vic_elec %>% autoplot(Demand)
+
+pelt %>% autoplot(Hare)
+pelt %>% autoplot(Lynx)
+```
+```{r}
+head(gafa_stock)
+head(PBS)
+head(vic_elec)
+head(pelt)
+```
+```{r}
+gafa_stock %>%
+    group_by(Symbol) %>%
+    filter(Close == max(Close)) %>%
+    select(Date)
+```
+
+```{r}
+tute1 <- readr::read_csv("https://bit.ly/fpptute1")
+# tute1 <- readr::read_csv("tute1.csv")
+# View(tute1)
+
+mytimeseries <- tute1 %>%
+    mutate(Quarter = yearquarter(Quarter)) %>%
+    as_tsibble(index = Quarter)
+
+mytimeseries %>%
+    pivot_longer(-Quarter) %>%
+    autoplot()
+```
+
+```{r}
+library(USgas)
+x <- us_total %>% as_tsibble(key = state, index = year)
+x %>%
+    filter(state == c(
+        "Maine",
+        "Vermont",
+        "New Hampshire",
+        "Massachusetts",
+        "Connecticut",
+        "Rhode Island"
+    )) %>%
+    autoplot(y) + ylab("Gas consumption") + xlab("Years")
+```
+
+```{r}
+# tourism1 <- readxl::read_excel("https://bit.ly/fpptourism")
+tourism1 <- readxl::read_excel("tourism.xlsx")
+mytimeseries2 <- tourism1 %>%
+    mutate(Quarter = yearquarter(Quarter)) %>%
+    as_tsibble(key = c(Region, State, Purpose), index = Quarter)
+
+mytimeseries2 %>%
+    as_tibble() %>%
+    group_by(Region, Purpose) %>%
+    summarise(AveTrips == mean(Trips)) %>%
+    ungroup() %>%
+    filter(AveTrips == max(AveTrips))
+
+mytimeseries2 %>% group_by(State) %>% summarise(TotalTrips = sum(Trips))
+```

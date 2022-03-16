@@ -1,0 +1,150 @@
+```{r Setup}
+library(fpp3)
+setwd("C:/Users/chela/OneDrive - Monash University/ETC3550/Assignments/A1/")
+```
+
+# Question 1
+```{r Google stock price on the 21st March}
+goog <- readr::read_csv("GOOG.csv")
+
+goog %>%
+    mutate(Date = as.Date(Date, "%Y-%m-%d")) %>%
+    as_tsibble(
+        # key = c(Open, High, Low, "Adj Close", Volume),
+        # key = Close,
+        index = Date,
+        # regular = FALSE
+    ) -> goog
+autoplot(goog, Close)
+lmgoog <- lm(Close ~ Date, data = goog)
+summary(lmgoog)
+plot(Close ~ Date, data = goog) + abline(lm(Close ~ Date, data = goog))
+
+goog %>%
+    ACF(Close, lag_max = 12) %>%
+    autoplot()
+goog %>%
+    tsibble::fill_gaps() %>%
+    gg_season(Close, labels = "both")
+
+
+goog_fit <- goog %>%
+    tsibble::fill_gaps() %>%
+    model(
+        Drift = NAIVE(Close ~ drift())
+    )
+
+goog_fit %>%
+    forecast(h = "11 days") %>%
+    autoplot(goog)
+
+goog_fit %>%
+    forecast(h = "63 days") %>%
+    autoplot(goog)
+
+
+(2631) + 1.282 * sqrt(17746)
+(2631) - 1.282 * sqrt(17746)
+```
+
+# Question 2
+```{r Max temp at Melb Airport April 5th}
+temps <- readr::read_csv("IDCJAC0002_086282_Data12.csv")
+temps %>%
+    transform(Apr = as.numeric(Apr)) %>%
+    as_tsibble(index = Year) -> temps
+
+
+temps %>%
+    filter(!is.na(Apr)) -> temps
+temps %>% select(Apr) -> temps
+
+mean(temps[["Apr"]])
+mean(temps[["Apr"]]) + 1.282 * sd(temps[["Apr"]])
+mean(temps[["Apr"]]) - 1.282 * sd(temps[["Apr"]])
+
+temps %>%
+    ACF(Apr, lag_max = 10) %>%
+    autoplot()
+```
+
+# Question 3
+```{r Collingwood vs Essendon}
+AFL <- readr::read_csv("AFL.csv")
+lmAFL <- lm(Margin ~ Date, data = AFL)
+AFL %>% as_tsibble(index = Date) -> AFL
+# AFL[-c(11), ] -> AFL
+AFL %>%
+    # ACF(Margin, lag_max = 5) %>%
+    autoplot()
+
+AFL %>%
+    # mutate(Date = yearmonth(Date)) %>%
+    as_tsibble(index = Date) %>%
+    model(trend_model = TSLM(Margin ~ trend())) -> fit_AFL
+
+fit_AFL %>%
+    forecast(h = "1 years") %>%
+    autoplot(AFL)
+
+mean(AFL$Margin)
+sd(AFL$Margin)
+mean(AFL$Margin) + 1.282 * sd(AFL$Margin)
+mean(AFL$Margin) - 1.282 * sd(AFL$Margin)
+```
+
+```{r other}
+AFL <- readr::read_csv("AFL.csv")
+summary(lmAFL)
+plot(Margin ~ Date, data = AFL) + abline(lm(Margin ~ Date, data = AFL))
+```
+```{r bad math}
+-4.693 + 1.282 * 3.397
+-4.693 - 1.282 * 3.397
+```
+# Question 4
+```{r Aus employed people for April}
+employed <- readr::read_csv("Employed people, Seasonally adjusted.csv")
+
+employed %>%
+    mutate(Date = yearmonth(Date)) %>%
+    as_tsibble(index = Date) %>%
+    ACF(Employed_people, lag_max = 24) %>%
+    autoplot()
+
+employed %>%
+    mutate(Date = yearmonth(Date)) %>%
+    as_tsibble(index = Date) %>%
+    gg_season(Employed_people, labels = "both")
+
+employed %>%
+    mutate(Date = yearmonth(Date)) %>%
+    as_tsibble(index = Date) %>%
+    model(trend_model = TSLM(Employed_people ~ trend())) -> fit
+
+fit %>% forecast(h = "3 months")
+
+employed %>%
+    mutate(Date = yearmonth(Date)) %>%
+    as_tsibble(index = Date) -> emp
+forecast(fit, h = "3 months") %>%
+    autoplot(emp)
+
+plot(employed) + abline(lmemployed)
+```
+```{r other}
+mean(rnorm(10000, -3.9, 2073))
+```
+# Question 5
+```{r Google stock price on the 23rd May}
+goog_fit %>%
+    forecast(h = "73 days") %>%
+    tail()
+
+goog_fit %>%
+    forecast(h = "73 days") %>%
+    autoplot(goog)
+
+(2767.) + 1.282 * sqrt(160940)
+(2767.) - 1.282 * sqrt(160940)
+```
