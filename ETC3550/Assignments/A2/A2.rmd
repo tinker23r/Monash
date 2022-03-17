@@ -1,6 +1,15 @@
+---
+title: "ETC3550 Assignment 2"
+author: "Chelaka Paranahewa"
+output: 
+  html_document:
+    fig_crop: false
+---
+
+
 ```{r Setup, echo = FALSE, include = FALSE}
 library(fpp3, warn.conflicts = FALSE)
-
+# sessionInfo()
 # Use your student ID as the seed
 set.seed(31455034)
 myseries <- aus_retail %>%
@@ -15,7 +24,7 @@ myseries <- aus_retail %>%
 ```
 
 # Question 1
-```{r autoplot}
+```{r autoplot, fig.width = 9, fig.height = 5, dpi = 144}
 myseries %>%
     autoplot(Turnover) +
     labs(title = "Australia Retail Turnover", subtitle = "South Australia") +
@@ -26,7 +35,7 @@ From the graph, it can be gathered that there is a trend pointing up with varian
 
 
 # Question 2
-```{r gg_season}
+```{r gg_season, fig.width = 9, fig.height = 5, dpi = 144}
 myseries %>%
     gg_season(Turnover, labels = "both") +
     labs(title = "Australia Retail Turnover", subtitle = "South Australia") +
@@ -36,7 +45,7 @@ myseries %>%
 This graph still supports the general trend upwards. It also shows an unexpected lingering of turnover in 2006. It does not exhibit the seasonal peaks every other month, instead it had a relatively high turnover that remains for 4 months before returning to the seasonal cycle. 
 
 # Question 3
-```{r gg_subseries()}
+```{r gg_subseries, fig.width = 9, fig.height = 5, dpi = 144}
 myseries %>%
     gg_subseries(Turnover) +
     labs(title = "Australia Retail Turnover", subtitle = "South Australia") +
