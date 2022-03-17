@@ -43,4 +43,4 @@ myseries %>%
         ylab("Turnover [million $AUD]")
 ```
 <!-- Analysis -->
-From
+From this graph the seasonal trend of the turnover spiking every other month exists only in the first half of the year. Afterwards the seasonality subsides and the trend grows gradually until Decemeber where there is a massive jump in turnover. 
