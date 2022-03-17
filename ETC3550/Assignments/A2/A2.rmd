@@ -33,7 +33,7 @@ myseries %>%
         ylab("Turnover [million $AUD]")
 ```
 <!-- Analysis -->
-
+This graph still supports the general trend upwards. It also shows an unexpected lingering of turnover in 2006. It does not exhibit the seasonal peaks every other month, instead it had a relatively high turnover that remains for 4 months before returning to the seasonal cycle. 
 
 # Question 3
 ```{r gg_subseries()}
@@ -43,5 +43,4 @@ myseries %>%
         ylab("Turnover [million $AUD]")
 ```
 <!-- Analysis -->
-
-
+From
