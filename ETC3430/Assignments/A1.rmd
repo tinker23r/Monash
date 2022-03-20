@@ -14,5 +14,5 @@ setwd("C:/Users/chela/GitHub Local Repo/Uni-Work/ETC3430/Assignments/")
 ```
 
 ```{r}
-data <- read_excel("Data.xlsx")
+data <- read_excel("Data.xlsx", sheet = 2)
 ```
