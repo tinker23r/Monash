@@ -1,0 +1,9 @@
+```{r}
+library(fpp3)
+library(tidyverse)
+setwd("C:/Users/chela/OneDrive - Monash University/ETC3550/Tutorials/T4")
+```
+
+```{r}
+global_economy %>% autoplot()
+```
