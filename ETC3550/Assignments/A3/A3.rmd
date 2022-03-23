@@ -7,7 +7,7 @@ output:
 ---
 ```{r Setup, echo = FALSE, include = FALSE}
 library(fpp3, warn.conflicts = FALSE)
-# sessionInfo()
+
 # Use your student ID as the seed
 set.seed(31455034)
 myseries <- aus_retail %>%
@@ -21,7 +21,7 @@ myseries <- aus_retail %>%
     filter(`Series ID` == sample(`Series ID`, 1))
 ```
 # Question 1
-## Finding an approriate Box-Cox transformtation
+## Finding an approriate Box-Cox transformation
 
 ##### Original Dataset plotted
 ```{r}
@@ -34,6 +34,8 @@ myseries %>% autoplot(Turnover) +
 
 ```
 
+From the orginal data, the seasonal trend at the beginning of the period is rather small but as the trend continues upwards so does the peaks of the seasonal jumps.
+
 ```{r}
 # Natural Log
 myseries %>% autoplot(box_cox(Turnover, 0.0)) +
@@ -43,6 +45,8 @@ myseries %>% autoplot(box_cox(Turnover, 0.0)) +
     ) +
     ylab("Turnover [million $AUD]")
 ```
+
+Making lambda = 0 makes the box-cox transformation into a natural log which makes the trend linear and makes seasonal spikes consistant which simplifies the model. 
 
 ```{r}
 # Best using Guerrero's method
@@ -55,3 +59,5 @@ myseries %>% autoplot(box_cox(Turnover, 0.0845)) +
     ) +
     ylab("Turnover [million $AUD]")
 ```
+
+Using Guerrero's method, the loglikihood 
