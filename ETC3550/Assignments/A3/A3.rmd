@@ -60,4 +60,6 @@ myseries %>% autoplot(box_cox(Turnover, 0.0845)) +
     ylab("Turnover [million $AUD]")
 ```
 
-Using Guerrero's method, the loglikihood 
+Using Guerrero's method, the log likelihood has a maxmium value at around 0.0845. Substituting lambda with 0.0845 in the box-cox transformation gives a similar plot to the previous log transformation. 
+
+# Question 2
