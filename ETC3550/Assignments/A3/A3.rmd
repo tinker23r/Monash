@@ -66,7 +66,8 @@ Using Guerrero's method, the log likelihood has a maxmium value at around 0.0845
 ```{r, fig.width = 9, fig.height = 5, dpi = 144}
 myseries %>%
     model(
-        STL(Turnover ~ trend(window = 13) + season(window = "periodic"),
+        STL(
+            box_cox(Turnover, 0.0845) ~ trend(window = 13) + season(window = "periodic"),
             robust = TRUE
         )
     ) %>%
