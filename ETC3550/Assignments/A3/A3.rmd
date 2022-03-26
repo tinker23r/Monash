@@ -32,7 +32,7 @@ myseries %>% autoplot(Turnover) +
     ) +
     ylab("Turnover [million $AUD]")
 ```
-
+<!-- Analysis -->
 From the orginal data, the seasonal trend at the beginning of the period is rather small but as the trend continues upwards so does the peaks of the seasonal jumps.
 
 ```{r}
@@ -44,7 +44,7 @@ myseries %>% autoplot(box_cox(Turnover, 0.0)) +
     ) +
     ylab("Turnover [million $AUD]")
 ```
-
+<!-- Analysis -->
 Making lambda = 0 makes the box-cox transformation into a natural log which makes the trend linear and makes seasonal spikes consistant which simplifies the model. 
 
 ```{r}
@@ -58,7 +58,7 @@ myseries %>% autoplot(box_cox(Turnover, 0.0845)) +
     ) +
     ylab("Turnover [million $AUD]")
 ```
-
+<!-- Analysis -->
 Using Guerrero's method, the log likelihood has a maxmium value at around 0.0845. Substituting lambda with 0.0845 in the box-cox transformation gives a similar plot to the previous log transformation. 
 
 # Question 2
@@ -66,10 +66,12 @@ Using Guerrero's method, the log likelihood has a maxmium value at around 0.0845
 ```{r}
 myseries %>%
     model(
-        STL(Turnover ~ trend(window = 7) + season(window = "periodic"),
+        STL(Turnover ~ trend(window = 13) + season(window = "periodic"),
             robust = TRUE
         )
     ) %>%
     components() %>%
     autoplot()
 ```
+<!-- Analysis -->
+From the remainder graph, there seems to be an anomoly during the year 2014. The spike that should have been there is instead replaced with a large valley. Upon doing research close to the year 2014, there was an unexpected event in October of 2014. Costco was attempting to enter the Adeliade market but it was pushed back because of a licensing issue. 
