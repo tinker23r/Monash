@@ -24,7 +24,7 @@ myseries <- aus_retail %>%
 ## Finding an approriate Box-Cox transformation
 
 ##### Original Dataset plotted
-```{r}
+```{r, fig.width = 9, fig.height = 5, dpi = 144}
 myseries %>% autoplot(Turnover) +
     labs(
         title = "Australia Retail Turnover",
@@ -35,7 +35,7 @@ myseries %>% autoplot(Turnover) +
 <!-- Analysis -->
 From the orginal data, the seasonal trend at the beginning of the period is rather small but as the trend continues upwards so does the peaks of the seasonal jumps.
 
-```{r}
+```{r, fig.width = 9, fig.height = 5, dpi = 144}
 # Natural Log
 myseries %>% autoplot(box_cox(Turnover, 0.0)) +
     labs(
@@ -47,7 +47,7 @@ myseries %>% autoplot(box_cox(Turnover, 0.0)) +
 <!-- Analysis -->
 Making lambda = 0 makes the box-cox transformation into a natural log which makes the trend linear and makes seasonal spikes consistant which simplifies the model. 
 
-```{r}
+```{r, fig.width = 9, fig.height = 5, dpi = 144}
 # Best using Guerrero's method
 myseries %>%
     features(Turnover, features = guerrero)
@@ -63,7 +63,7 @@ Using Guerrero's method, the log likelihood has a maxmium value at around 0.0845
 
 # Question 2
 
-```{r}
+```{r, fig.width = 9, fig.height = 5, dpi = 144}
 myseries %>%
     model(
         STL(Turnover ~ trend(window = 13) + season(window = "periodic"),
