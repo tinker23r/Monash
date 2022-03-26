@@ -75,4 +75,6 @@ myseries %>%
     autoplot()
 ```
 <!-- Analysis -->
-From the remainder graph, there seems to be an anomoly during the year 2014. The spike that should have been there is instead replaced with a large valley. Upon doing research close to the year 2014, there was an unexpected event in October of 2014. Costco was attempting to enter the Adeliade market but it was pushed back because of a licensing issue. 
+The decomposition shown in the graph indicates that the time series is multiplicative. The transformation done to the dataset in the previous question was a box_cox transformation using a lambda value of 0.0845 which is closer to 0. And according to the box_cox transofrmation lambda value being zero is a log transformation. Hence the multiplicative decomposition. 
+
+<!-- From the remainder graph, there seems to be an anomoly during the year 2014. The spike that should have been there is instead replaced with a large valley. Upon doing research close to the year 2014, there was an unexpected event in October of 2014. Costco was attempting to enter the Adeliade market but it was pushed back because of a licensing issue.  -->
