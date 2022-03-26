@@ -31,7 +31,6 @@ myseries %>% autoplot(Turnover) +
         subtitle = "Original"
     ) +
     ylab("Turnover [million $AUD]")
-
 ```
 
 From the orginal data, the seasonal trend at the beginning of the period is rather small but as the trend continues upwards so does the peaks of the seasonal jumps.
@@ -63,3 +62,14 @@ myseries %>% autoplot(box_cox(Turnover, 0.0845)) +
 Using Guerrero's method, the log likelihood has a maxmium value at around 0.0845. Substituting lambda with 0.0845 in the box-cox transformation gives a similar plot to the previous log transformation. 
 
 # Question 2
+
+```{r}
+myseries %>%
+    model(
+        STL(Turnover ~ trend(window = 7) + season(window = "periodic"),
+            robust = TRUE
+        )
+    ) %>%
+    components() %>%
+    autoplot()
+```
