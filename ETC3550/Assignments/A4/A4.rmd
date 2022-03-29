@@ -1,0 +1,25 @@
+---
+title: "ETC3550 Assignment 4"
+author: "Chelaka Paranahewa"
+output: 
+  html_document:
+    fig_crop: false
+---
+
+```{r Setup, echo = FALSE, include = FALSE}
+library(fpp3, warn.conflicts = FALSE)
+```
+
+```{r Number of sheep slaughtered in Victoria}
+sheep <- aus_livestock %>%
+    filter(Animal == "Sheep") %>%
+    filter(State == "Victoria")
+
+training <- sheep %>% filter(year(Month) <= 2014)
+
+fit <- training %>% model(SNAIVE(Count))
+
+fit %>% forecast(h = 18) %>% accuracy(sheep)
+
+fit %>% 
+```

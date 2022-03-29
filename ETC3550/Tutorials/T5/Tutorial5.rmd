@@ -1,0 +1,111 @@
+```{r}
+library(fpp3)
+library(tidyverse)
+```
+
+# Question 1
+
+```{r Aus Pop}
+aus_pop <- global_economy %>%
+    filter(Country == "Australia")
+
+aus_pop %>%
+    model(NAIVE(Population)) %>%
+    forecast(h = 12) %>%
+    autoplot(aus_pop)
+
+# Bad does not work
+aus_pop %>%
+    model(SNAIVE(Population ~ lag("year"))) %>%
+    forecast(h = 12) %>%
+    autoplot(aus_pop)
+
+aus_pop %>%
+    model(RW(Population ~ drift())) %>%
+    forecast(h = 12) %>%
+    autoplot(aus_pop)
+```
+
+```{r Bricks}
+bricks <- aus_production %>%
+    select(Bricks) %>%
+    drop_na(Bricks)
+
+
+bricks %>%
+    model(NAIVE(Bricks)) %>%
+    forecast(h = 12) %>%
+    autoplot(bricks)
+
+bricks %>%
+    model(SNAIVE(Bricks ~ lag("year"))) %>%
+    forecast(h = 12) %>%
+    autoplot(bricks)
+
+bricks %>%
+    model(RW(Bricks ~ drift())) %>%
+    forecast(h = 12) %>%
+    autoplot(bricks)
+```
+
+# Question 2
+```{r Facebook's Stock}
+# unique(gafa_stock$Symbol)
+FB <- gafa_stock %>%
+    filter(Symbol == "FB") %>%
+    mutate(day = row_number()) %>%
+    update_tsibble(index = day, regular = TRUE)
+
+FB %>% autoplot(Close)
+
+p <- FB %>%
+    model(RW(Close ~ drift())) %>%
+    forecast(h = 12 * 10) %>%
+    autoplot(FB)
+
+p + geom_segment(
+    aes(
+        x = head(day, 1),
+        y = head(Adj_Close, 1),
+        xend = tail(day, 1),
+        yend = tail(Adj_Close, 1)
+    ),
+    col = "blue"
+)
+```
+
+# Question 3
+```{r}
+# Extract data of interest
+recent_production <- aus_production %>%
+    filter(year(Quarter) >= 1992)
+# Define and estimate a model
+fit <- recent_production %>% model(SNAIVE(Beer))
+# Look at the residuals
+fit %>% gg_tsresiduals()
+# Look a some forecasts
+fit %>%
+    forecast() %>%
+    autoplot(recent_production)
+```
+
+# Question 4
+```{r}
+# Extract data of interest
+exports <- global_economy %>%
+    select(Exports) %>%
+    filter(Year >= 1992) %>%
+    filter(Country == "Australia") %>% 
+    drop_na()
+
+# Define and estimate a model
+fit <- exports %>% model(NAIVE(Exports))
+
+# Look at the residuals
+fit %>% gg_tsresiduals()
+
+# Look a some forecasts
+fit %>%
+    forecast() %>%
+    autoplot(exports)
+```
