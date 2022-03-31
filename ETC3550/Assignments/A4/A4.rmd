@@ -10,35 +10,37 @@ output:
 library(fpp3, warn.conflicts = FALSE)
 ```
 
-```{r Number of sheep slaughtered in Victoria}
+```{r Number of sheep slaughtered in Victoria, warning=FALSE, fig.width = 9, fig.height = 5, dpi = 144}
 sheep <- aus_livestock %>%
     filter(Animal == "Sheep") %>%
     filter(State == "Victoria")
 
 training <- sheep %>% filter(year(Month) <= 2014)
 
-fit <- training %>% model(SNAIVE(Count))
-
-fit %>%
-    forecast(h = 12 * 4) %>%
-    accuracy(sheep)
+fit <- training %>% model(`Seasonal Naïve` = SNAIVE(Count))
 
 fit %>% gg_tsresiduals() +
     labs(
-        title = "Residuals plot for the numeber of sheep slaughtered", subtitle = "Victoria"
+        title = "Residuals plot for the numeber of sheep slaughtered",
+        subtitle = "Victoria"
     )
 ```
 <!-- Analysis of the residuals -->
 The residual histogram plot for the number of sheep slaughtered in Victoria has skew to the left. The ACF plot also has a strong autocorrolation for data points that are one month apart. From the innovation residuals plot, the variance over time is shrinking while the mean remains constant. Thus all three graphs suggests that the residuals does not resemble white noise. 
 
-```{r}
+```{r, fig.width = 9, fig.height = 5, dpi = 144}
 fit %>%
     forecast(h = 12 * 4) %>%
-    autoplot(sheep) +
+    autoplot(sheep, level = NULL) +
     labs(
         title = "Number of sheep slaughtered from 1960",
         subtitle = "Victoria",
         y = "Slaughtered count",
         x = "Month"
-    )
+    ) + guides(colour = guide_legend(title = "Forecast"))
+
+fit %>%
+    forecast(h = 12 * 4) %>%
+    accuracy(sheep) %>%
+    knitr::kable()
 ```
