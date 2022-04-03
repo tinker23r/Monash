@@ -11,6 +11,7 @@ output:
 library(tidyverse)
 library(readxl)
 setwd("C:/Users/chela/GitHub Local Repo/Uni-Work/ETC3430/Assignments/")
+set.seed(31455034)
 ```
 
 ```{r}
