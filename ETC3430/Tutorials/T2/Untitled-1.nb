@@ -214,7 +214,7 @@ Cell[BoxData[
 }, Open  ]]
 },
 WindowSize->{718.5, 366.},
-WindowMargins->{{Automatic, -5.25}, {-5.25, Automatic}},
+WindowMargins->{{337.5, Automatic}, {Automatic, 148.5}},
 FrontEndVersion->"13.0 for Microsoft Windows (64-bit) (February 4, 2022)",
 StyleDefinitions->FrontEnd`FileName[{$RootDirectory, "C:", "Users", "chela", 
    "Documents", "Wolfram Mathematica"}, "Monokai.nb", CharacterEncoding -> 
