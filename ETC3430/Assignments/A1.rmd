@@ -29,10 +29,51 @@ for (day in 1:5) {
     outcomes %>% add_row(Day = day, Sunny = c(dayout[1:3]), Rainy = c(dayout[4:6]), Overcast = c(dayout[7:9]))
 }
 
-outMatrix %>% c() %>% typeof()
+outMatrix %>%
+    c() %>%
+    typeof()
 ```
 
 # Question 2
 ```{r}
+P <- matrix(
+    data = c(0.45, 0.35, 0.20, 0.36, 0.34, 0.30, 0.25, 0.65, 0.10),
+    nrow = 3, ncol = 3, byrow = TRUE
+)
 
+CP <- t(apply(P, 1, cumsum))
+n <- 100
+
+X <- matrix(0, n + 1, 1)
+X[1, 1] <- 1
+X
+for (i in 1:n) {
+    u <- runif(1)
+    X[i + 1, 1] <- 1 * (u < CP[X[i, 1], 1]) + 2 * (u < CP[X[i, 1], 2]) * (u > CP[X[i, 1], 1]) + 3 * (u > CP[X[i, 1], 2])
+}
+X %>%
+    as_tibble() %>%
+    ggplot(aes(x = V1)) +
+    geom_histogram()
+
+temp <- X
+
+for (i in 1:n) {
+    X[i + 1, 1] <- 1 * (u < CP[X[i, 1], 1]) + 2 * (u < CP[X[i, 1], 2]) * (u > CP[X[i, 1], 1]) + 3 * (u > CP[X[i, 1], 2])
+}
+X[, 1] <- 1 * (u < CP[X[i, 1], 1]) + 2 * (u < CP[X[i, 1], 2]) * (u > CP[X[i, 1], 1]) + 3 * (u > CP[X[i, 1], 2])
+
+
+
+pi <- matrix(0, 1, 3)
+pi[1, 1] <- sum(X == 1) / n
+pi[1, 2] <- sum(X == 2) / n
+pi[1, 3] <- sum(X == 3) / n
+
+results <- pi %*% (P %^% 2)
 ```
+{"1", "Sunny", "Sunny", "Rainy"},
+{"2", "Rainy", "Rainy", "Rainy"},
+{"3", "Rainy", "Rainy", "Rainy"},
+{"4", "Rainy", "Rainy", "Rainy"},
+{"5", "Rainy", "Rainy", "Rainy"},
