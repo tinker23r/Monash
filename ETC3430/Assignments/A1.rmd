@@ -114,15 +114,6 @@ print(glue("Theoretical Value:"))
 print(theory)
 ```
 
-
-pseudo
-
-day = Sunny
-run individual sims of someone living thru day 2 and day 3
-repeat 100, 1000, 10000, 100000
-
-return probability of day being not Sunny
-
 # Question 3
 ```{r}
 data_sheet2 <- read_excel("Data.xlsx", sheet = 2) %>%
