@@ -89,15 +89,20 @@ markov_proc_del_start <- function(sim_size, starting_day) {
 set.seed(31455034)
 sims <- c(100, 1000, 10000, 100000)
 for (index in 1:4) {
+    result <- markov_proc_del_start(sims[index], 2)
     print(glue("Simulation size: {sims[index]}"))
-    print(markov_proc_del_start(sims[index], 2))
+    print(result)
+    print(glue("Pr(X_3>1|X_1=1) = {result[1,2]} + {result[1,3]}"))
+    print(glue("Pr(X_3>1|X_1=1) = {result[1,2] + result[1,3]}"))
     cat("\n")
     cat("\n")
 }
 
-theory <- c(1, 0, 0) %*% (P %^% 2)
+result <- c(1, 0, 0) %*% (P %^% 2)
 print(glue("Theoretical Value:"))
-print(theory)
+print(result)
+print(glue("Pr(X_3>1|X_1=1) = {result[1,2]} + {result[1,3]}"))
+print(glue("Pr(X_3>1|X_1=1) = {result[1,2] + result[1,3]}"))
 ```
 
 ## Part G
@@ -106,14 +111,21 @@ print(theory)
 set.seed(31455034)
 sims <- c(100, 1000, 10000, 100000)
 for (index in 1:4) {
+    result <- markov_proc_del_start(sims[index], 3)
     print(glue("Simulation size: {sims[index]}"))
-    print(markov_proc_del_start(sims[index], 3))
+    print(result)
+    print(glue("Pr(X_3>1|X_2=1) = {result[1,2]} + {result[1,3]}"))
+    print(glue("Pr(X_3>1|X_2=1) = {result[1,2] + result[1,3]}"))
     cat("\n")
     cat("\n")
 }
-theory <- c(1, 0, 0) %*% (P %^% 1)
+
+result <- c(1, 0, 0) %*% (P %^% 1)
 print(glue("Theoretical Value:"))
-print(theory)
+print(result)
+print(glue("Pr(X_3>1|X_2=1) = {result[1,2]} + {result[1,3]}"))
+print(glue("Pr(X_3>1|X_2=1) = {result[1,2] + result[1,3]}"))
+
 ```
 
 # Question 3
