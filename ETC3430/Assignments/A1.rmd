@@ -45,14 +45,25 @@ for (day in 0:5) {
     ))
     mode_out <- mode_out %>% rbind(tibble(
         "Day" = day,
-        "Sunny" = switch(which.max(tm[1, ]), "Sunny", "Rainy", "Overcast"),
-        "Rainy" = switch(which.max(tm[2, ]), "Sunny", "Rainy", "Overcast"),
-        "Overcast" = switch(which.max(tm[3, ]), "Sunny", "Rainy", "Overcast")
+        "Sunny" = switch(which.max(tm[1, ]),
+            "Sunny",
+            "Rainy",
+            "Overcast"
+        ),
+        "Rainy" = switch(which.max(tm[2, ]),
+            "Sunny",
+            "Rainy",
+            "Overcast"
+        ),
+        "Overcast" = switch(which.max(tm[3, ]),
+            "Sunny",
+            "Rainy",
+            "Overcast"
+        )
     ))
 }
 knitr::kable(table_out)
 knitr::kable(mode_out)
-
 ```
 
 
@@ -277,7 +288,7 @@ Both Dataset 1 and Dataset 2's distribution matrices stablises to 4 decimal plac
 
 # Question 3
 ## Part A
-```{r}
+```{r TM Dataset1}
 data_sheet2 <- read_excel("Data.xlsx", sheet = 2) %>%
     select(Dataset1, Dataset2)
 
@@ -306,16 +317,17 @@ int_matrix1 <- matrix(
     ),
     2, 2, TRUE
 )
-int_matrix1
+expm(int_matrix1)
+```
 
-
-
+## Part B
+```{r TM Dataset2}
 lambda_states2 <- data_sheet2 %>%
     select(Dataset2, state) %>%
     group_by(state) %>%
     summarise(lambda = 1 / mean(Dataset2))
 
-# Make intensity matrix
+# Make transtion intensity matrix
 int_matrix2 <- matrix(
     c(
         -lambda_states2$lambda[1], lambda_states2$lambda[1],
@@ -325,5 +337,13 @@ int_matrix2 <- matrix(
 )
 int_matrix2
 
-print(write.table(mtcars, file = "mtcars.txt", sep = " "))
+expm(int_matrix2)
 ```
+
+## Part C
+```{r Distribution Matrix in 10 periods}
+expm(int_matrix1) %^% 10
+expm(int_matrix2) %^% 10
+```
+
+## Part D
