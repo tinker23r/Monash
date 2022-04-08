@@ -16,21 +16,23 @@ set.seed(31455034)
 ```
 
 # Question 1
-## Part A
+### Part A
 ```{r Transition Matrix}
 P <- matrix(
     data = c(0.45, 0.35, 0.20, 0.36, 0.34, 0.30, 0.25, 0.65, 0.10),
     nrow = 3, ncol = 3, byrow = TRUE
 )
 dimnames(P) <- list(
-    c("Sunny", "Rainy", "Overcast"), # row names
+    c("Sunny", "Rainy", "Overcast"),
     c("Sunny", "Rainy", "Overcast")
-) # column names
-print(glue("Estimated Transition Matrix"))
-knitr::kable(P)
+)
+```
+#### Estimated Transition Matrix
+```{r, echo=FALSE}
+knitr::kable(P, caption = "Estimated Transition Matrix")
 ```
 
-## Part B
+### Part B
 ```{r Most likely states within the next 5 days}
 table_out <- tibble()
 mode_out <- tibble()
@@ -62,12 +64,14 @@ for (day in 0:5) {
         )
     ))
 }
+```
+```{r, echo=FALSE}
 knitr::kable(table_out)
 knitr::kable(mode_out)
 ```
 
 
-## Part C
+### Part C
 ```{r Expected state within the next 5 days}
 table_out <- tibble()
 for (day in 0:5) {
@@ -79,14 +83,16 @@ for (day in 0:5) {
         "Overcast" = tm[1, 3]
     ))
 }
+```
+```{r, echo=FALSE}
 knitr::kable(table_out)
 ```
 
-## Part D
+### Part D
 Part b shows the mode given that the previous state at each given day, while part c is showing the expected value given that the previous state at each given day. 
 
 
-## Part E
+### Part E
 ```{r Histograms of distribution , fig.width = 9, fig.height = 5, warning=FALSE, message=FALSE}
 set.seed(3149)
 P <- matrix(
@@ -127,10 +133,13 @@ for (index in 1:4) {
     repeater(sims[index])
 }
 ```
+$$PDF\left(X_3\right)=\left[\begin{matrix}\frac{1}{3}&\frac{1}{3}&\frac{1}{3}\\\end{matrix}\right]\ast\left[\begin{matrix}0.45&0.35&0.20\\0.50&0.25&0.25\\0.55&0.35&0.10\\\end{matrix}\right]^3$$
+$$PDF\left(X_3\right)=\left[\begin{matrix}0.3685687&0.4133447&0.2180867\\\end{matrix}\right]$$
+From the simulation of n=100,1000,{10}^{4\ }\mathrm{and\ }{10}^5, the values converge on the pdf value for X_3 since the accuracy of the models increases as more datapoints are tested. 
 
 
-## Part F
-```{r Monte Carlo estimation Day1 is Sunny}
+### Part F
+```{r Monte Carlo estimation Day1 is Sunny, results='asis'}
 ## Part F
 set.seed(31455034)
 P <- matrix(
@@ -161,49 +170,65 @@ set.seed(31455034)
 sims <- c(100, 1000, 10000, 100000)
 for (index in 1:4) {
     result <- markov_proc_del_start(sims[index], 2)
-    print(glue("Simulation size: {sims[index]}"))
-    print(result)
-    print(glue("Pr(X_3>1|X_1=1) = {result[1,2]} + {result[1,3]}"))
-    print(glue("Pr(X_3>1|X_1=1) = {result[1,2] + result[1,3]}"))
+    # print(result)
+    print(knitr::kable(result, caption = glue("Simulation size: {sims[index]}")))
+    # cat("\n")
+    cat("\n\n")
+    print(glue("Pr(X_3>1|X_1=1) = {result[1,2]} + {result[1,3]} \n"))
+    cat("\n\n")
+    print(glue("Pr(X_3>1|X_1=1) = {result[1,2]} + {result[1,3]} \n"))
     cat("\n\n")
 }
-
-result <- c(1, 0, 0) %*% (P %^% 2)
-print(glue("Theoretical Value:"))
-print(result)
-print(glue("Pr(X_3>1|X_1=1) = {result[1,2]} + {result[1,3]}"))
-print(glue("Pr(X_3>1|X_1=1) = {result[1,2] + result[1,3]}"))
 ```
-The Monte Carlo estimation is done through random sampling to estimate the true probability. However for this to be done accurately, the sampling size needs to be large, since bias in the sample need to minimised. This can be seen in the different values of n that is used to estimate, Pr\left(X_3>1\middle| X_1=1\right). As n grows so does the accuracy, it converges on the theoretical value. 
 
-## Part G
-```{r Monte Carlo estimation Day2 is Sunny)}
+```{r,  echo=FALSE, results='asis'}
+result <- c(1, 0, 0) %*% (P %^% 2)
+# print(result)
+knitr::kable(result, caption = "Theoretical Value")
+glue("Pr(X_3>1|X_1=1) = {result[1,2]} + {result[1,3]} \n")
+cat("\n\n")
+glue("Pr(X_3>1|X_1=1) = {result[1,2]} + {result[1,3]} \n")
+cat("\n\n")
+```
+```{r, echo=FALSE}
+```
+The Monte Carlo estimation is done through random sampling to estimate the true probability. However for this to be done accurately, the sampling size needs to be large, since bias in the sample need to minimised. This can be seen in the different values of n that is used to estimate, $Pr\left(X_3>1\middle| X_1=1\right)$. As n grows so does the accuracy, it converges on the theoretical value. 
+
+### Part G
+```{r Monte Carlo estimation Day2 is Sunny), results='asis'}
 ## Part G
 set.seed(31455034)
 sims <- c(100, 1000, 10000, 100000)
 for (index in 1:4) {
     result <- markov_proc_del_start(sims[index], 3)
-    print(glue("Simulation size: {sims[index]}"))
-    print(result)
-    print(glue("Pr(X_3>1|X_2=1) = {result[1,2]} + {result[1,3]}"))
-    print(glue("Pr(X_3>1|X_2=1) = {result[1,2] + result[1,3]}"))
+    print(knitr::kable(result, caption = glue("Simulation size: {sims[index]}")))
+    # cat("\n")
+    cat("\n\n")
+    print(glue("Pr(X_3>1|X_2=1) = {result[1,2]} + {result[1,3]} \n"))
+    cat("\n\n")
+    print(glue("Pr(X_3>1|X_2=1) = {result[1,2]} + {result[1,3]} \n"))
     cat("\n\n")
 }
-
-result <- c(1, 0, 0) %*% (P %^% 1)
-print(glue("Theoretical Value:"))
-print(result)
-print(glue("Pr(X_3>1|X_2=1) = {result[1,2]} + {result[1,3]}"))
-print(glue("Pr(X_3>1|X_2=1) = {result[1,2] + result[1,3]}"))
 ```
-Markov processes are memoryless hence, Pr\left(X_3>1\middle| X_1=1,X_2=1\right)=Pr\left(X_3>1\middle| X_2=1\right). The Monte Carlo estimation is done through random sampling to estimate the true probability. However for this to be done accurately, the sampling size needs to be large, since bias in the sample need to minimised. This can be seen in the different values of n that is used to estimate, Pr\left(X_3>1\middle| X_2=1\right). As n grows so does the accuracy, it converges on the theoretical value. 
 
-## Part H
+```{r, echo = FALSE, results='asis'}
+result <- c(1, 0, 0) %*% (P %^% 1)
+knitr::kable(result, caption = "Theoretical Value")
+glue("Pr(X_3>1|X_2=1) = {result[1,2]} + {result[1,3]} \n")
+cat("\n\n")
+glue("Pr(X_3>1|X_2=1) = {result[1,2]} + {result[1,3]} \n")
+cat("\n\n")
+```
+```{r, echo=FALSE}
+```
+Markov processes are memoryless hence, $Pr\left(X_3>1\middle| X_1=1,X_2=1\right)=Pr\left(X_3>1\middle| X_2=1\right)$. The Monte Carlo estimation is done through random sampling to estimate the true probability. However for this to be done accurately, the sampling size needs to be large, since bias in the sample need to minimised. This can be seen in the different values of n that is used to estimate, $Pr\left(X_3>1\middle| X_2=1\right)$. As n grows so does the accuracy, it converges on the theoretical value. 
+
+### Part H
 The difference between the two questions is that (f) is checking the probability of day 3 not being sunny given that it was sunny on day 1 which means we should be calculating (or rather simulating) for 2 days. (g) on the other hand, is checking the same idea except it tells us that day 1 & 2 are both sunny. Now since we know that we are working with a Markov process, we just need to know the most recent event as a Markov process can be calculated from only one starting point without any past data. Therefore we should simulating for only 1 day and perform calculations from day 2\ \rightarrow3. 
 
 # Question 2
-## Part A
-```{r TM Dataset1}
+### Part A
+```{r Sheet 1 TM Dataset1, message=FALSE}
 data_sheet1 <- read_excel("Data.xlsx", sheet = 1) %>%
     select(Dataset1, Dataset2)
 
@@ -226,7 +251,6 @@ for (index in 2:length(data_sheet1$Dataset1)) {
 
 # Starting state is 1 and first datapoint is 1
 count_matrix1[1, 1] <- count_matrix1[1, 1] + 1
-# view(count_matrix1)
 
 # Creating transition
 tran_mat1 <- matrix(
@@ -237,16 +261,13 @@ tran_mat1 <- matrix(
     ), 3, 3,
     byrow = TRUE
 )
-
-# view(tran_mat1)
-
-
-print(glue("Transition Matrix for Dataset 1"))
-print(tran_mat1)
+```
+```{r, echo=FALSE}
+knitr::kable(tran_mat1, caption = "Transition Matrix for Dataset 1")
 ```
 
-## Part B
-```{r TM Dataset2}
+### Part B
+```{r Sheet 1 TM Dataset2}
 count_matrix2 <- matrix(0, 3, 3)
 
 # Creating Count
@@ -255,7 +276,6 @@ for (index in 2:length(data_sheet1$Dataset2)) {
     col <- data_sheet1$Dataset2[index]
     count_matrix2[row, col] <- count_matrix2[row, col] + 1
 }
-# view(count_matrix2)
 
 # Creating transition
 tran_mat2 <- matrix(c(
@@ -263,32 +283,30 @@ tran_mat2 <- matrix(c(
     count_matrix2[2, ] / sum(count_matrix2[2, ]),
     count_matrix2[3, ] / sum(count_matrix2[3, ])
 ), 3, 3, byrow = TRUE)
-
-# view(tran_mat2)
-
-print(glue("Transition Matrix for Dataset 2"))
-print(tran_mat2)
+```
+```{r, echo=FALSE}
+knitr::kable(tran_mat2, caption = "Transition Matrix for Dataset 2")
 ```
 
-## Part C
-```{r Distribution Matrix in 10 periods}
-periods <- 10
-print(glue("Distribution Matrix of Dataset 1 in {periods} periods"))
-print(tran_mat1 %^% periods)
-cat("\n\n")
+### Part C
 
-print(glue("Distribution Matrix of Dataset 2 in {periods} periods"))
-print(tran_mat2 %^% periods)
-cat("\n\n")
+#### Transition Matrix of Dataset 1 in 10 periods
+```{r Sheet 1 DS1 Transition Matrix in 10 periods}
+knitr::kable((tran_mat1 %^% 10), caption = "DS1 Transition Matrix in 10 periods")
 ```
 
-## Part D
+#### Transition Matrix of Dataset 2 in 10 periods
+```{r Sheet 1 DS2 Transition Matrix in 10 periods}
+knitr::kable((tran_mat2 %^% 10), caption = "DS2 Transition Matrix in 10 periods")
+```
+
+### Part D
 Both Dataset 1 and Dataset 2's distribution matrices stablises to 4 decimal places by the time the period approaches 10. In Dataset2, the columns of the transtion matrix converge on the same value, i.e. $Pr(X_{10} = 1 | X_1 = 1) = Pr(X_{10} = 1 | X_1 = 2) = Pr(X_{10} = 1 | X_1 = 3)$ and so one for the other 2 states as well. This has not happened to Dataset1 at period 10 but proper stability occurs after 8 more periods. 
 
 
 # Question 3
-## Part A
-```{r TM Dataset1}
+### Part A
+```{r Sheet 2 TM Dataset1, message=FALSE}
 data_sheet2 <- read_excel("Data.xlsx", sheet = 2) %>%
     select(Dataset1, Dataset2)
 
@@ -309,7 +327,9 @@ lambda_states1 <- data_sheet2 %>%
     group_by(state) %>%
     summarise(lambda = 1 / mean(Dataset1))
 
-# Make intensity matrix
+knitr::kable(lambda_states1, caption = "Lambda States DS1")
+
+# Make transition intensity matrix
 int_matrix1 <- matrix(
     c(
         -lambda_states1$lambda[1], lambda_states1$lambda[1],
@@ -317,17 +337,19 @@ int_matrix1 <- matrix(
     ),
     2, 2, TRUE
 )
-expm(int_matrix1)
+knitr::kable(expm(int_matrix1), caption = "Transition Intentisy Matrix DS1")
 ```
 
-## Part B
-```{r TM Dataset2}
+### Part B
+```{r Sheet 2 TM Dataset2}
 lambda_states2 <- data_sheet2 %>%
     select(Dataset2, state) %>%
     group_by(state) %>%
     summarise(lambda = 1 / mean(Dataset2))
 
-# Make transtion intensity matrix
+knitr::kable(lambda_states2, caption = "Lambda States DS2")
+
+# Make transition intensity matrix
 int_matrix2 <- matrix(
     c(
         -lambda_states2$lambda[1], lambda_states2$lambda[1],
@@ -335,15 +357,14 @@ int_matrix2 <- matrix(
     ),
     2, 2, TRUE
 )
-int_matrix2
-
-expm(int_matrix2)
+knitr::kable(expm(int_matrix2), caption = "Transition Intentisy Matrix DS2")
 ```
 
-## Part C
-```{r Distribution Matrix in 10 periods}
-expm(int_matrix1) %^% 10
-expm(int_matrix2) %^% 10
+### Part C
+```{r Sheet 2 Transtion Matrix in 10 periods}
+knitr::kable(expm(int_matrix1) %^% 10, caption = "DS1 Transition Matrix in 10 jumps")
+knitr::kable(expm(int_matrix2) %^% 10, caption = "DS2 Transition Matrix in 10 jumps")
 ```
 
-## Part D
+### Part D
+Dataset 1 's distribution matrix stablises to 2 decimal places by the time the period approaches 10. Dataset 2's distribution matrix stablises to 3 decimal places by the time the period approaches 10. Also for Dataset 1 and Dataset 2, the columns of the transtion matrix converge on the same value, i.e. $Pr(X_{10} = 1 | X_1 = 1) = Pr(X_{10} = 1 | X_1 = 2) = Pr(X_{10} = 1 | X_1 = 3)$ and so one for the other 2 states as well. 
