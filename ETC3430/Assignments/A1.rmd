@@ -2,17 +2,16 @@
 title: "ETC3430 Assignment 1"
 author: "Chelaka Paranahewa"
 output: 
-  html_document:
+  pdf_document:
     fig_crop: false
-    
 ---
     
-```{r Setup, echo=FALSE, message=FALSE}
+```{r Setup, echo=FALSE, warning=FALSE, message=FALSE}
 library(tidyverse)
 library(readxl)
 library(expm)
 library(glue)
-# setwd("C:/Users/chela/GitHub Local Repo/Uni-Work/ETC3430/Assignments/")
+setwd("C:/Users/chela/GitHub Local Repo/Uni-Work/ETC3430/Assignments/")
 set.seed(31455034)
 ```
 
@@ -156,19 +155,84 @@ print(glue("Pr(X_3>1|X_2=1) = {result[1,2] + result[1,3]}"))
 
 # Question 2
 ## Part A
-```{r}
-# data_sheet1 <- read_excel("Data.xlsx", sheet = 1) %>%
-#     select("Dataset1", "Dataset2")
+```{r TM Dataset1}
+data_sheet1 <- read_excel("Data.xlsx", sheet = 1) %>%
+    select(Dataset1, Dataset2)
 
-# data_sheet1 <- data_sheet1[-c(1), ]
+data_sheet1 <- data_sheet1[-c(1), ]
 
-# data_sheet1 <- transform(
-#     data_sheet1,
-#     "Dataset1" = as.numeric("Dataset1"),
-#     "Dataset2" = as.numeric("Dataset2")
-# )
+data_sheet1 <- transform(
+    data_sheet1,
+    Dataset1 = as.numeric(Dataset1),
+    Dataset2 = as.numeric(Dataset2)
+)
+
+count_matrix1 <- matrix(0, 3, 3)
+
+# Creating Count
+for (index in 2:length(data_sheet1$Dataset1)) {
+    row <- data_sheet1$Dataset1[index - 1]
+    col <- data_sheet1$Dataset1[index]
+    count_matrix1[row, col] <- count_matrix1[row, col] + 1
+}
+
+# Starting state is 1 and first datapoint is 1
+count_matrix1[1, 1] <- count_matrix1[1, 1] + 1
+# view(count_matrix1)
+
+# Creating transition
+tran_mat1 <- matrix(c(
+    count_matrix1[1, ] / sum(count_matrix1[1, ]),
+    count_matrix1[2, ] / sum(count_matrix1[2, ]),
+    count_matrix1[3, ] / sum(count_matrix1[3, ])
+), 3, 3, byrow = TRUE)
+
+# view(tran_mat1)
+
+
+print(glue("Transition Matrix for Dataset 1"))
+print(tran_mat1)
 ```
 
+# Part B
+```{r TM Dataset2}
+count_matrix2 <- matrix(0, 3, 3)
+
+# Creating Count
+for (index in 2:length(data_sheet1$Dataset2)) {
+    row <- data_sheet1$Dataset2[index - 1]
+    col <- data_sheet1$Dataset2[index]
+    count_matrix2[row, col] <- count_matrix2[row, col] + 1
+}
+# view(count_matrix2)
+
+# Creating transition
+tran_mat2 <- matrix(c(
+    count_matrix2[1, ] / sum(count_matrix2[1, ]),
+    count_matrix2[2, ] / sum(count_matrix2[2, ]),
+    count_matrix2[3, ] / sum(count_matrix2[3, ])
+), 3, 3, byrow = TRUE)
+
+# view(tran_mat2)
+
+print(glue("Transition Matrix for Dataset 2"))
+print(tran_mat2)
+```
+
+# Part C
+```{r Distribution Matrix in 10 periods}
+periods <- 10
+print(glue("Distribution Matrix of Dataset 1 in {periods} periods"))
+print(c(1, 0, 0) %*% (tran_mat1 %^% periods))
+cat("\n\n")
+
+print(glue("Distribution Matrix of Dataset 2 in {periods} periods"))
+print(c(1, 0, 0) %*% (tran_mat2 %^% periods))
+cat("\n\n")
+```
+
+# Part D
+Both Dataset 1 and Dataset 2's distribution matrices stablises to 4 decimal places by the time the period approaches 10. 
 
 
 # Question 3
@@ -242,3 +306,7 @@ int_matrix2
 # }
 
 # print(int_mat_contructor(data_sheet2, "Dataset1")) -->
+
+```{r}
+
+```
