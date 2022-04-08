@@ -194,7 +194,7 @@ print(glue("Transition Matrix for Dataset 1"))
 print(tran_mat1)
 ```
 
-# Part B
+## Part B
 ```{r TM Dataset2}
 count_matrix2 <- matrix(0, 3, 3)
 
@@ -219,7 +219,7 @@ print(glue("Transition Matrix for Dataset 2"))
 print(tran_mat2)
 ```
 
-# Part C
+## Part C
 ```{r Distribution Matrix in 10 periods}
 periods <- 10
 print(glue("Distribution Matrix of Dataset 1 in {periods} periods"))
@@ -231,7 +231,7 @@ print(c(1, 0, 0) %*% (tran_mat2 %^% periods))
 cat("\n\n")
 ```
 
-# Part D
+## Part D
 Both Dataset 1 and Dataset 2's distribution matrices stablises to 4 decimal places by the time the period approaches 10. 
 
 
