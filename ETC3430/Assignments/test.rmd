@@ -1,5 +1,0 @@
-```{r}
-library(glue)
-y <- 3
-cat(glue("$\\beta {y}$"))
-```

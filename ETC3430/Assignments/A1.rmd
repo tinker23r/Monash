@@ -135,7 +135,7 @@ for (index in 1:4) {
 ```
 $$PDF\left(X_3\right)=\left[\begin{matrix}\frac{1}{3}&\frac{1}{3}&\frac{1}{3}\\\end{matrix}\right]\ast\left[\begin{matrix}0.45&0.35&0.20\\0.50&0.25&0.25\\0.55&0.35&0.10\\\end{matrix}\right]^3$$
 $$PDF\left(X_3\right)=\left[\begin{matrix}0.3685687&0.4133447&0.2180867\\\end{matrix}\right]$$
-From the simulation of n=100,1000,{10}^{4\ }\mathrm{and\ }{10}^5, the values converge on the pdf value for X_3 since the accuracy of the models increases as more datapoints are tested. 
+From the simulation of $n=100,1000,{10}^{4\ }\mathrm{and\ }{10}^5$, the values converge on the pdf value for X_3 since the accuracy of the models increases as more datapoints are tested. 
 
 
 ### Part F
@@ -224,7 +224,7 @@ cat("\n\n")
 Markov processes are memoryless hence, $Pr\left(X_3>1\middle| X_1=1,X_2=1\right)=Pr\left(X_3>1\middle| X_2=1\right)$. The Monte Carlo estimation is done through random sampling to estimate the true probability. However for this to be done accurately, the sampling size needs to be large, since bias in the sample need to minimised. This can be seen in the different values of n that is used to estimate, $Pr\left(X_3>1\middle| X_2=1\right)$. As n grows so does the accuracy, it converges on the theoretical value. 
 
 ### Part H
-The difference between the two questions is that (f) is checking the probability of day 3 not being sunny given that it was sunny on day 1 which means we should be calculating (or rather simulating) for 2 days. (g) on the other hand, is checking the same idea except it tells us that day 1 & 2 are both sunny. Now since we know that we are working with a Markov process, we just need to know the most recent event as a Markov process can be calculated from only one starting point without any past data. Therefore we should simulating for only 1 day and perform calculations from day 2\ \rightarrow3. 
+The difference between the two questions is that (f) is checking the probability of day 3 not being sunny given that it was sunny on day 1 which means we should be calculating (or rather simulating) for 2 days. (g) on the other hand, is checking the same idea except it tells us that day 1 & 2 are both sunny. Now since we know that we are working with a Markov process, we just need to know the most recent event as a Markov process can be calculated from only one starting point without any past data. Therefore we should simulating for only 1 day and perform calculations from day 2 $\rightarrow$ 3. 
 
 # Question 2
 ### Part A
