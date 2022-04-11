@@ -1,0 +1,19 @@
+---
+title: "ETC3550 Assignment 5"
+author: "Chelaka Paranahewa"
+output: 
+  html_document:
+    fig_crop: false
+---
+
+```{r Setup, echo = FALSE, include = FALSE}
+library(fpp3, warn.conflicts = FALSE)
+```
+
+Write an R function that takes a numeric vector and computes forecasts of the next 10 observations using simple exponential smoothing. Your function should estimate the optimal values of the smoothing parameter and the initial level (by minimizing the sum of squared residuals). Do not use the ETS() function or the forecast::ses() function to do the calculations.
+
+You will find it easier if you do Q2 and Q3 from Section 8.8 first.
+
+You need to submit one R script which provides this R function. To receive full marks, your function should give the correct forecasts without giving an error.
+
+This assignment is worth 4 marks.
