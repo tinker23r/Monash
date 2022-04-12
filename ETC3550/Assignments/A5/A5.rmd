@@ -20,7 +20,7 @@ You need to submit one R script which provides this R function. To receive full 
 This assignment is worth 4 marks.
 
 ```{r Simple Exponential Smoothing Function}
-ses_func <- function(y, alpha_input=0) {
+ses_func <- function(y, forecast = 1, alpha_input = 0) {
     smooth_function <- function(y, alpha, level) {
         n <- length(y)
         levels <- numeric(n + 1)
@@ -44,10 +44,9 @@ ses_func <- function(y, alpha_input=0) {
             for (t in 1:n) {
                 levels[t + 1] <- alpha_g * y[t] + (1 - alpha_g) * levels[t]
             }
-            yhat <- levels[- (n + 1)]
+            yhat <- levels[-(n + 1)]
             sse <- sum((y - yhat)^2)
             if (sse > sse_best) {
-            # if (alpha_g == 1) {
                 break
             }
             alpha_g <- alpha_g + alpha_incrmenter
@@ -55,13 +54,23 @@ ses_func <- function(y, alpha_input=0) {
         }
         return(alpha_g)
     }
-
-    return(smooth_function(y, alpha_cal(y, alpha_input, y[1]), y[1]))
+    if (forecast == 1) {
+        return(smooth_function(y, alpha_cal(y, alpha_input, y[1]), y[1]))
+    }
+    while (forecast > 1) {
+        print(forecast)
+        y <- append(
+            y,
+            smooth_function(y, alpha_cal(y, alpha_input, y[1]), y[1])
+        )
+        forecast <- forecast - 1
+    }
+    return(y[length(y)])
 }
 ```
 
 ```{r Function Tests}
 piggies <- aus_livestock %>%
     filter(Animal == "Pigs", State == "Victoria")
-ses_func(piggies$Count)
+ses_func(piggies$Count, 1)
 ```
