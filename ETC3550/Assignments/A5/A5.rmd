@@ -8,6 +8,7 @@ output:
 
 ```{r Setup, echo = FALSE, include = FALSE}
 library(fpp3, warn.conflicts = FALSE)
+library(tidyverse, warn.conflicts = FALSE)
 ```
 
 Write an R function that takes a numeric vector and computes forecasts of the next 10 observations using simple exponential smoothing. Your function should estimate the optimal values of the smoothing parameter and the initial level (by minimizing the sum of squared residuals). Do not use the ETS() function or the forecast::ses() function to do the calculations.
@@ -18,10 +19,49 @@ You need to submit one R script which provides this R function. To receive full 
 
 This assignment is worth 4 marks.
 
-```{r ETS Manual}
-ets_Manual <- function(parameters) {
-   selected
-}
+```{r Simple Exponential Smoothing Function}
+ses_func <- function(y, alpha_input=0) {
+    smooth_function <- function(y, alpha, level) {
+        n <- length(y)
+        levels <- numeric(n + 1)
+        levels[1] <- level
+        for (t in 1:n) {
+            levels[t + 1] <- alpha * y[t] + (1 - alpha) * levels[t]
+        }
+        yhat <- levels[-(n + 1)]
+        sse <- sum((y - yhat)^2)
+        return(levels[n + 1])
+    }
 
-ETS()
+
+    alpha_cal <- function(y, alpha_g, level) {
+        alpha_incrmenter <- 10^(-3)
+        sse_best <- Inf
+        repeat{
+            n <- length(y)
+            levels <- numeric(n + 1)
+            levels[1] <- level
+            for (t in 1:n) {
+                levels[t + 1] <- alpha_g * y[t] + (1 - alpha_g) * levels[t]
+            }
+            yhat <- levels[- (n + 1)]
+            sse <- sum((y - yhat)^2)
+            if (sse > sse_best) {
+            # if (alpha_g == 1) {
+                break
+            }
+            alpha_g <- alpha_g + alpha_incrmenter
+            sse_best <- sse
+        }
+        return(alpha_g)
+    }
+
+    return(smooth_function(y, alpha_cal(y, alpha_input, y[1]), y[1]))
+}
+```
+
+```{r Function Tests}
+piggies <- aus_livestock %>%
+    filter(Animal == "Pigs", State == "Victoria")
+ses_func(piggies$Count)
 ```
