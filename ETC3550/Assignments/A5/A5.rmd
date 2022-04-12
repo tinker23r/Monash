@@ -29,7 +29,6 @@ ses_func <- function(y, forecast = 1, alpha_input = 0) {
             levels[t + 1] <- alpha * y[t] + (1 - alpha) * levels[t]
         }
         yhat <- levels[-(n + 1)]
-        sse <- sum((y - yhat)^2)
         return(levels[n + 1])
     }
 
