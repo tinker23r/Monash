@@ -11,18 +11,30 @@ fit <- piggies %>% model(ETS(Count ~ error("A") + trend("N") + season("N")))
 fc <- fit %>%
     forecast(h = 4)
 
+fc <- fit %>%
+    forecast(h = 10)
 fc %>% autoplot(piggies)
+report(fit)
 ```
 
 ```{r}
+# y is a list
+# alpha is a number
+# level is a number
 smooth_function <- function(y, alpha, level) {
     n <- length(y)
-    levels <- numerical(n + 1)
+    levels <- numeric(n + 1)
     levels[1] <- level
     for (t in 1:n) {
         levels[t + 1] <- alpha * y[t] + (1 - alpha) * levels[t]
     }
-    yhat <- levels[n + 1]
-    return(yhat)
+    yhat <- levels[- (n + 1)]
+    sse <- sum((y - yhat)^2)
+    return(levels[n + 1])
 }
+smooth_function(piggies$Count, 0.3221247, 100646.6)
+```
+
+```{r}
+for (i in 1:10) print(fit %>% forecast(h = i))
 ```
