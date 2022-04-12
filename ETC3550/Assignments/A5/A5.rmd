@@ -17,3 +17,11 @@ You will find it easier if you do Q2 and Q3 from Section 8.8 first.
 You need to submit one R script which provides this R function. To receive full marks, your function should give the correct forecasts without giving an error.
 
 This assignment is worth 4 marks.
+
+```{r ETS Manual}
+ets_Manual <- function(parameters) {
+   selected
+}
+
+ETS()
+```

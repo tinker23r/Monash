@@ -11,7 +11,7 @@ fit <- piggies %>% model(ETS(Count ~ error("A") + trend("N") + season("N")))
 fc <- fit %>%
     forecast(h = 4)
 
-fc %>% autoplot()
+fc %>% autoplot(piggies)
 ```
 
 ```{r}
