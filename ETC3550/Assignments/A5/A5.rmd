@@ -28,14 +28,16 @@ ses_func <- function(y, forecast = 1, alpha_input = 0) {
         for (t in 1:n) {
             levels[t + 1] <- alpha * y[t] + (1 - alpha) * levels[t]
         }
-        yhat <- levels[-(n + 1)]
         return(levels[n + 1])
     }
 
-
+    # Finds the best alpha value for given dataset
     alpha_cal <- function(y, alpha_g, level) {
-        alpha_incrmenter <- 10^(-3)
+        # adjust incrementor for more fined alpha value at the cost of time
+        alpha_incrementor <- 10^(-5)
         sse_best <- Inf
+
+        # Do while loop
         repeat{
             n <- length(y)
             levels <- numeric(n + 1)
@@ -48,7 +50,7 @@ ses_func <- function(y, forecast = 1, alpha_input = 0) {
             if (sse > sse_best) {
                 break
             }
-            alpha_g <- alpha_g + alpha_incrmenter
+            alpha_g <- alpha_g + alpha_incrementor
             sse_best <- sse
         }
         return(alpha_g)
@@ -71,5 +73,5 @@ ses_func <- function(y, forecast = 1, alpha_input = 0) {
 ```{r Function Tests}
 piggies <- aus_livestock %>%
     filter(Animal == "Pigs", State == "Victoria")
-ses_func(piggies$Count, 1)
+ses_func(piggies$Count, 1, 0)
 ```
