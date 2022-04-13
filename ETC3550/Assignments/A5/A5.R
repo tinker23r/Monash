@@ -1,25 +1,6 @@
----
-title: "ETC3550 Assignment 5"
-author: "Chelaka Paranahewa"
-output: 
-  html_document:
-    fig_crop: false
----
-
-```{r Setup, echo = FALSE, include = FALSE}
 library(fpp3, warn.conflicts = FALSE)
 library(tidyverse, warn.conflicts = FALSE)
-```
 
-Write an R function that takes a numeric vector and computes forecasts of the next 10 observations using simple exponential smoothing. Your function should estimate the optimal values of the smoothing parameter and the initial level (by minimizing the sum of squared residuals). Do not use the ETS() function or the forecast::ses() function to do the calculations.
-
-You will find it easier if you do Q2 and Q3 from Section 8.8 first.
-
-You need to submit one R script which provides this R function. To receive full marks, your function should give the correct forecasts without giving an error.
-
-This assignment is worth 4 marks.
-
-```{r Simple Exponential Smoothing Function}
 ses_func <- function(y, forecast = 1, alpha_input = 0) {
     smooth_function <- function(y, alpha, level) {
         n <- length(y)
@@ -68,18 +49,3 @@ ses_func <- function(y, forecast = 1, alpha_input = 0) {
     }
     return(y[length(y)])
 }
-```
-
-```{r Function Tests}
-piggies <- aus_livestock %>%
-    filter(Animal == "Pigs", State == "Victoria")
-
-print("Custom Funct outputs")
-ses_func(piggies$Count, 1, 0)
-
-print("ETS model outputs")
-piggies %>%
-    model(ETS(Count ~ error("A") + trend("N") + season("N"))) %>%
-    forecast(h = 1)
-
-```

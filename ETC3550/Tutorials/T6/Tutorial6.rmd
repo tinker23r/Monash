@@ -7,7 +7,7 @@ library(tidyverse)
 piggies <- aus_livestock %>%
     filter(Animal == "Pigs", State == "Victoria")
 
-fit <- piggies %>% model(ETS(Count ~ error("A") + trend("N") + season("N")))
+fit <- piggies %>% model(ETS(Count ~ error("A") + trend("N") + season("N"))) %>% forecast(h = 10)
 fc <- fit %>%
     forecast(h = 4)
 
@@ -37,4 +37,93 @@ smooth_function(piggies$Count, 0.3221247, 100646.6)
 
 ```{r}
 for (i in 1:10) print(fit %>% forecast(h = i))
+```
+
+```{r}
+my_10_step_ses <- function(y) {
+
+    # make a function to find sse of a data set if there is sample par
+    # there is no need to run this function itself, it is only created to be
+    # inserted into the optim() function
+    my_sse <- function(par, y) {
+        alpha <- par[1]
+        level <- par[2]
+
+        data_estimate <- numeric(length(y))
+        level_estimate <- numeric(length(y))
+
+        data_estimate[1] <- level
+
+        level_estimate[1] <- alpha * y[1] + (1 - alpha) * level
+
+        for (t in 2:length(data_estimate)) {
+            data_estimate[t] <- level_estimate[t - 1]
+
+            level_estimate[t] <- alpha * y[t] + (1 - alpha) * level_estimate[t - 1]
+        }
+
+        # finding sse
+        e <- y - data_estimate
+        sse <- sum(e^2)
+        return(sse)
+    }
+
+    # use the my_sse function within optim and give any alpha and the first value
+    # of the data set as a level
+
+    # this will find the optimal alpha and level
+    par_optim <- optim(
+        par = c(
+            alpha = 0.5,
+            level = y[1]
+        ),
+        fn = my_sse,
+        y = y
+    )
+
+    # this is a function that will forecast 10 steps into the future
+
+    my_10step_forecast <- function(par, y) {
+        alpha <- par[1]
+        level <- par[2]
+
+        data_estimate <- numeric(length(y) + 9)
+        level_estimate <- numeric(length(y) + 9)
+
+        data_estimate[1] <- level
+
+        level_estimate[1] <- alpha * y[1] + (1 - alpha) * level
+
+        for (t in 2:length(data_estimate)) {
+            data_estimate[t] <- level_estimate[t - 1]
+
+            level_estimate[t] <- alpha * y[t] + (1 - alpha) * level_estimate[t - 1]
+
+            y <- append(y, level_estimate)
+            # update data set with the estimate to ensure the use of y in the equation
+            # can continue
+        }
+
+        return(tail(y, 10))
+    }
+
+    # finally, the overall function will use the forecasting function along with the
+    # data set and optimal parameters
+
+    return(my_10step_forecast(par_optim$par, y))
+}
+```
+
+```{r Function Tests}
+piggies <- aus_livestock %>%
+    filter(Animal == "Pigs", State == "Victoria")
+
+print("Custom Funct outputs")
+my_10_step_ses(piggies$Count)
+ses_func(piggies$Count, 10)
+
+print("ETS model outputs")
+piggies %>%
+    model(ETS(Count ~ error("A") + trend("N") + season("N"))) %>%
+    forecast(h = 10)
 ```
