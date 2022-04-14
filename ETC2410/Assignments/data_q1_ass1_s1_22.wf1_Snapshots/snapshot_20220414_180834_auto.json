@@ -1,7 +1,7 @@
 
 {
-	"commands" : [ "close Untitled", "Q1_F.rename q1_e" ],
-	"description" : "Generated based on timer.",
+	"commands" : null,
+	"description" : "Generated right after last save",
 	"label" : "auto",
 	"workbook_meta" : 
 	{
