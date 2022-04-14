@@ -11,66 +11,68 @@ library(fpp3, warn.conflicts = FALSE)
 library(tidyverse, warn.conflicts = FALSE)
 ```
 
-Write an R function that takes a numeric vector and computes forecasts of the next 10 observations using simple exponential smoothing. Your function should estimate the optimal values of the smoothing parameter and the initial level (by minimizing the sum of squared residuals). Do not use the ETS() function or the forecast::ses() function to do the calculations.
-
-You will find it easier if you do Q2 and Q3 from Section 8.8 first.
-
-You need to submit one R script which provides this R function. To receive full marks, your function should give the correct forecasts without giving an error.
-
-This assignment is worth 4 marks.
-
 ```{r Simple Exponential Smoothing Function}
 ses_func <- function(y, forecast = 1, alpha_input = 0) {
-    smooth_function <- function(y, alpha, level) {
+    smooth_function <- function(y, alpha, level, sse_mode = FALSE) {
         n <- length(y)
         levels <- numeric(n + 1)
-        levels[1] <- level
+        # levels[1] <- level
+        # for (t in 1:n) {
+        #     levels[t + 1] <- alpha * y[t] + (1 - alpha) * levels[t]
+        # }
+        levels[1] <- alpha * y[1] + (1 - alpha) * level
+
         for (t in 1:n) {
             levels[t + 1] <- alpha * y[t] + (1 - alpha) * levels[t]
         }
-        return(levels[n + 1])
-    }
-
-    # Finds the best alpha value for given dataset
-    alpha_cal <- function(y, alpha_g, level) {
-        # adjust incrementor for more fined alpha value at the cost of time
-        alpha_incrementor <- 10^(-5)
-        sse_best <- Inf
-
-        # Do while loop
-        repeat{
-            n <- length(y)
-            levels <- numeric(n + 1)
-            levels[1] <- level
-            for (t in 1:n) {
-                levels[t + 1] <- alpha_g * y[t] + (1 - alpha_g) * levels[t]
-            }
-            yhat <- levels[-(n + 1)]
-            sse <- sum((y - yhat)^2)
-            if (sse > sse_best) {
-                break
-            }
-            alpha_g <- alpha_g + alpha_incrementor
-            sse_best <- sse
+        # Returns Sum of Squared Errors
+        if (sse_mode) {
+            return(sum((y - levels[- (n + 1)])^2))
         }
-        return(alpha_g)
+
+        # Returns yhat_(t+h)
+        return(levels[n + 1])
+        # return(tail(levels, 5))
     }
+
+    sse <- function(par, y) return(smooth_function(y, par[1], par[2], TRUE))
+
+    best_val <- optim(
+        par = c(
+            alpha = alpha_input,
+            level = y[1]
+        ),
+        fn = sse,
+        y = y
+    )
 
     # Forecast you return the same value for any value of h
-    # Since the formula for SES shows that h has no influence on the final output
-    return(smooth_function(y, alpha_cal(y, alpha_input, y[1]), y[1]))
+    # Since the formula for SES shows that h has no influence 
+    # on the final output
+    return(smooth_function(y, best_val$par[1], best_val$par[2]))
 }
+
+piggies <- aus_livestock %>%
+    filter(Animal == "Pigs", State == "Victoria")
+glue::glue("Custom Funct outputs {ses_func(piggies$Count)}")
+print("ETS model outputs")
+fc <- piggies %>%
+    model(ETS(Count ~ error("A") + trend("N") + season("N"))) %>%
+    forecast(h = 1)
+fc[6]
 ```
 
 ```{r Function Tests}
 piggies <- aus_livestock %>%
     filter(Animal == "Pigs", State == "Victoria")
 
-print("Custom Funct outputs")
-ses_func(piggies$Count, 1, 0)
+glue::glue("Custom Funct outputs {ses_func(piggies$Count)}")
+# ses_func(piggies$Count, 1, 0)
 
 print("ETS model outputs")
-piggies %>%
+fc <- piggies %>%
     model(ETS(Count ~ error("A") + trend("N") + season("N"))) %>%
     forecast(h = 1)
+
+fc[6]
 ```

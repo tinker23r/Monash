@@ -36,10 +36,6 @@ smooth_function(piggies$Count, 0.3221247, 100646.6)
 ```
 
 ```{r}
-for (i in 1:10) print(fit %>% forecast(h = i))
-```
-
-```{r}
 my_10_step_ses <- function(y) {
 
     # make a function to find sse of a data set if there is sample par
@@ -120,10 +116,10 @@ piggies <- aus_livestock %>%
 
 print("Custom Funct outputs")
 my_10_step_ses(piggies$Count)
-ses_func(piggies$Count, 10)
+ses_func(piggies$Count)
 
 print("ETS model outputs")
 piggies %>%
     model(ETS(Count ~ error("A") + trend("N") + season("N"))) %>%
-    forecast(h = 10)
+    forecast(h = 1)
 ```
