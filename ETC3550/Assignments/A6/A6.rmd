@@ -1,0 +1,23 @@
+---
+title: "ETC3550 Assignment 6"
+author: "Chelaka Paranahewa"
+output: 
+  pdf_document:
+    fig_crop: false
+---
+
+```{r Setup, echo = FALSE, include = FALSE}
+library(fpp3, warn.conflicts = FALSE)
+# sessionInfo()
+# Use your student ID as the seed
+set.seed(31455034)
+myseries <- aus_retail %>%
+    # Remove discontinued series
+    filter(!(`Series ID` %in% c(
+        "A3349561R", "A3349883F", "A3349499L", "A3349902A",
+        "A3349588R", "A3349763L", "A3349372C", "A3349450X",
+        "A3349679W", "A3349378T", "A3349767W", "A3349451A"
+    ))) %>%
+    # Select a series at random
+    filter(`Series ID` == sample(`Series ID`, 1))
+```
