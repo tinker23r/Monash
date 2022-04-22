@@ -21,3 +21,47 @@ myseries <- aus_retail %>%
     # Select a series at random
     filter(`Series ID` == sample(`Series ID`, 1))
 ```
+1. Find the best ETS model for your retail data. (i.e., find the model with the minimum AICc value computed using all available data).
+
+```{r}
+fit <- myseries %>% model(
+    # Additive
+    ANN = ETS(Turnover ~ error("A") + trend("N") + season("N")),
+    ANA = ETS(Turnover ~ error("A") + trend("N") + season("A")),
+    ANM = ETS(Turnover ~ error("A") + trend("N") + season("M")),
+    AAN = ETS(Turnover ~ error("A") + trend("A") + season("N")),
+    AAA = ETS(Turnover ~ error("A") + trend("A") + season("A")),
+    AAM = ETS(Turnover ~ error("A") + trend("A") + season("M")),
+    AAdN = ETS(Turnover ~ error("A") + trend("Ad") + season("N")),
+    AAdA = ETS(Turnover ~ error("A") + trend("Ad") + season("A")),
+    AAdM = ETS(Turnover ~ error("A") + trend("Ad") + season("M")),
+
+    # Multiplicative
+    MNN = ETS(Turnover ~ error("M") + trend("N") + season("N")),
+    MNA = ETS(Turnover ~ error("M") + trend("N") + season("A")),
+    MNM = ETS(Turnover ~ error("M") + trend("N") + season("M")),
+    MAN = ETS(Turnover ~ error("M") + trend("A") + season("N")),
+    MAA = ETS(Turnover ~ error("M") + trend("A") + season("A")),
+    MAM = ETS(Turnover ~ error("M") + trend("A") + season("M")),
+    MAdN = ETS(Turnover ~ error("M") + trend("Ad") + season("N")),
+    MAdA = ETS(Turnover ~ error("M") + trend("Ad") + season("A")),
+    MAdM = ETS(Turnover ~ error("M") + trend("Ad") + season("M")),
+)
+models <- colnames(fit)[-c(1, 2)]
+for (model in models) {
+    rep <- fit %>%
+        select(model) %>%
+        report()
+    rep$AIC
+}
+x <- as_tibble(fit)[-c(1, 2)] %>%
+    gather() %>%
+    mutate(model_desc = print(value)) %>%
+    select(key, ic)
+```
+
+
+2. Now use time series cross-validation on your data to compare the model from step 1, along with ETS(M,N,M), ETS(M,A,M) and ETS(M,Ad,M) models.
+
+3. Which model do you prefer for your data? Explain your answer.
+<!-- TEXT -->
