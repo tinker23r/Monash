@@ -8,6 +8,8 @@ output:
 
 ```{r Setup, echo = FALSE, include = FALSE}
 library(fpp3, warn.conflicts = FALSE)
+library(broom, warn.conflicts = FALSE)
+library(glue, warn.conflicts = FALSE)
 # sessionInfo()
 # Use your student ID as the seed
 set.seed(31455034)
@@ -45,23 +47,26 @@ fit <- myseries %>% model(
     MAM = ETS(Turnover ~ error("M") + trend("A") + season("M")),
     MAdN = ETS(Turnover ~ error("M") + trend("Ad") + season("N")),
     MAdA = ETS(Turnover ~ error("M") + trend("Ad") + season("A")),
-    MAdM = ETS(Turnover ~ error("M") + trend("Ad") + season("M")),
+    MAdM = ETS(Turnover ~ error("M") + trend("Ad") + season("M"))
 )
-models <- colnames(fit)[-c(1, 2)]
+models <- mable_vars(fit)
+min_AICc <- c("???", Inf)
 for (model in models) {
-    rep <- fit %>%
+    ets <- fit %>%
         select(model) %>%
-        report()
-    rep$AIC
+        glance()
+
+    if (ets$AICc < min_AICc[2]) {
+        min_AICc <- c(model, ets$AICc)
+    }
 }
-x <- as_tibble(fit)[-c(1, 2)] %>%
-    gather() %>%
-    mutate(model_desc = print(value)) %>%
-    select(key, ic)
+glue("The model with the lowest AICc is a {min_AICc[1]} model, with an AICc of {min_AICc[2]}")
 ```
 
-
 2. Now use time series cross-validation on your data to compare the model from step 1, along with ETS(M,N,M), ETS(M,A,M) and ETS(M,Ad,M) models.
+
+
+
 
 3. Which model do you prefer for your data? Explain your answer.
 <!-- TEXT -->
