@@ -28,39 +28,38 @@ myseries <- aus_retail %>%
 ```{r}
 fit <- myseries %>% model(
     # Additive
-    ANN = ETS(Turnover ~ error("A") + trend("N") + season("N")),
-    ANA = ETS(Turnover ~ error("A") + trend("N") + season("A")),
-    ANM = ETS(Turnover ~ error("A") + trend("N") + season("M")),
-    AAN = ETS(Turnover ~ error("A") + trend("A") + season("N")),
-    AAA = ETS(Turnover ~ error("A") + trend("A") + season("A")),
-    AAM = ETS(Turnover ~ error("A") + trend("A") + season("M")),
+    ANN =  ETS(Turnover ~ error("A") + trend("N")  + season("N")),
+    ANA =  ETS(Turnover ~ error("A") + trend("N")  + season("A")),
+    ANM =  ETS(Turnover ~ error("A") + trend("N")  + season("M")),
+    AAN =  ETS(Turnover ~ error("A") + trend("A")  + season("N")),
+    AAA =  ETS(Turnover ~ error("A") + trend("A")  + season("A")),
+    AAM =  ETS(Turnover ~ error("A") + trend("A")  + season("M")),
     AAdN = ETS(Turnover ~ error("A") + trend("Ad") + season("N")),
     AAdA = ETS(Turnover ~ error("A") + trend("Ad") + season("A")),
     AAdM = ETS(Turnover ~ error("A") + trend("Ad") + season("M")),
 
     # Multiplicative
-    MNN = ETS(Turnover ~ error("M") + trend("N") + season("N")),
-    MNA = ETS(Turnover ~ error("M") + trend("N") + season("A")),
-    MNM = ETS(Turnover ~ error("M") + trend("N") + season("M")),
-    MAN = ETS(Turnover ~ error("M") + trend("A") + season("N")),
-    MAA = ETS(Turnover ~ error("M") + trend("A") + season("A")),
-    MAM = ETS(Turnover ~ error("M") + trend("A") + season("M")),
+    MNN =  ETS(Turnover ~ error("M") + trend("N")  + season("N")),
+    MNA =  ETS(Turnover ~ error("M") + trend("N")  + season("A")),
+    MNM =  ETS(Turnover ~ error("M") + trend("N")  + season("M")),
+    MAN =  ETS(Turnover ~ error("M") + trend("A")  + season("N")),
+    MAA =  ETS(Turnover ~ error("M") + trend("A")  + season("A")),
+    MAM =  ETS(Turnover ~ error("M") + trend("A")  + season("M")),
     MAdN = ETS(Turnover ~ error("M") + trend("Ad") + season("N")),
     MAdA = ETS(Turnover ~ error("M") + trend("Ad") + season("A")),
     MAdM = ETS(Turnover ~ error("M") + trend("Ad") + season("M"))
 )
-models <- mable_vars(fit)
-min_AICc <- c("???", Inf)
-for (model in models) {
-    ets <- fit %>%
-        select(model) %>%
-        glance()
 
-    if (ets$AICc < min_AICc[2]) {
-        min_AICc <- c(model, ets$AICc)
-    }
-}
-glue("The model with the lowest AICc is a {min_AICc[1]} model, with an AICc of {min_AICc[2]}")
+ets <- fit %>%
+    select(mable_vars(fit)) %>%
+    glance()
+
+index <- ets$AICc %>% which.min()
+
+glue(
+    "The model with the lowest AICc is a {ets[[index, '.model']]} model, \\
+    with an AICc of {ets[[index, 'AICc']]}"
+    )
 ```
 
 2. Now use time series cross-validation on your data to compare the model from step 1, along with ETS(M,N,M), ETS(M,A,M) and ETS(M,Ad,M) models.
