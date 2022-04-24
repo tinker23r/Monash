@@ -64,7 +64,10 @@ glue(
 
 2. Now use time series cross-validation on your data to compare the model from step 1, along with ETS(M,N,M), ETS(M,A,M) and ETS(M,Ad,M) models.
 
+```{r}
+training <- myseries %>% filter(year(Month) <= 2017)
 
+```
 
 
 3. Which model do you prefer for your data? Explain your answer.
