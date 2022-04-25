@@ -88,4 +88,5 @@ training %>%
 
 
 3. Which model do you prefer for your data? Explain your answer.
-<!-- TEXT -->
+<!-- Analysis -->
+From the cross validation of my data with a rolling one day forecast, the model with the lowest RMSEs are both MAM models. The model automatically determined from Q1 using ETS() and a manually defined ETS() both show a RMSE value close to *3.69* which is lower than the MadM and MNM models. 
