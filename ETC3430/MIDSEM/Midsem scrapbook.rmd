@@ -1,0 +1,18 @@
+```{r}
+library(tidyverse)
+library(readxl)
+library(expm)
+setwd("C:/Users/chela/GitHub Repo/Monash/ETC3430/")
+```
+
+```{r}
+A <- Matrix(
+    c(0, 0.5, 0.5,
+    0.5, 0, 0.5,
+    0.5, 0.5, 0), 
+    nrow= 3,
+    ncol = 3,
+    byrow = TRUE
+)
+Matrix(0.5, ncol = 3)%*% A
+```
