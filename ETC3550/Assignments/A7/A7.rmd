@@ -11,17 +11,6 @@ library(fpp3, warn.conflicts = FALSE)
 library(broom, warn.conflicts = FALSE)
 library(glue, warn.conflicts = FALSE)
 # sessionInfo()
-# Use your student ID as the seed
-set.seed(31455034)
-myseries <- aus_retail %>%
-    # Remove discontinued series
-    filter(!(`Series ID` %in% c(
-        "A3349561R", "A3349883F", "A3349499L", "A3349902A",
-        "A3349588R", "A3349763L", "A3349372C", "A3349450X",
-        "A3349679W", "A3349378T", "A3349767W", "A3349451A"
-    ))) %>%
-    # Select a series at random
-    filter(`Series ID` == sample(`Series ID`, 1))
 ```
 
 TODO
@@ -41,14 +30,30 @@ Please submit your solution as a .R file.
 
 ```{r Autoregressive Model}
 ar2 <- function(n, c, phi1, phi2, sigma) {
+    # Input Verifier
+    # -1 < phi2 < 1
+    if (-1 >= phi1 & phi1 >= 1) warning("Phi2 is not between -1 and 1")
+
+    # phi1 + phi2 < 1
+    if (phi1 + phi2 >= 1) warning("Phi1 + Phi2 is greater than or equal to 1")
+
+    # phi1 - phi2 < 1
+    if (phi1 - phi2 >= 1) warning("Phi1 - Phi2 is greater than or equal to 1")
+
     output_vect <- rep(0, n)
-    output_vect1[1] <- c / (1 - phi1 - phi2)
-    output_vect1[2] <- c / (1 - phi1 - phi2)
+    output_vect[1] <- c / (1 - phi1 - phi2)
+    output_vect[2] <- c / (1 - phi1 - phi2)
 
     for (i in 3:n) {
-       output_vect <- c + phi1 * output_vect[i - 1] + phi2 * output_vect[i - 2]
+        output_vect[i] <- c +
+            phi1 * output_vect[i - 1] + phi2 * output_vect[i - 2]
     }
 
     return(output_vect)
 }
+```
+
+
+```{r tests}
+ar2(400, 3, 0.3, 0.2, 3)
 ```
