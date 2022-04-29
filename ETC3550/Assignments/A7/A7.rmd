@@ -1,0 +1,54 @@
+---
+title: "ETC3550 Assignment 7"
+author: "Chelaka Paranahewa"
+output: 
+  pdf_document:
+    fig_crop: false
+---
+
+```{r Setup, echo = FALSE, include = FALSE}
+library(fpp3, warn.conflicts = FALSE)
+library(broom, warn.conflicts = FALSE)
+library(glue, warn.conflicts = FALSE)
+# sessionInfo()
+# Use your student ID as the seed
+set.seed(31455034)
+myseries <- aus_retail %>%
+    # Remove discontinued series
+    filter(!(`Series ID` %in% c(
+        "A3349561R", "A3349883F", "A3349499L", "A3349902A",
+        "A3349588R", "A3349763L", "A3349372C", "A3349450X",
+        "A3349679W", "A3349378T", "A3349767W", "A3349451A"
+    ))) %>%
+    # Select a series at random
+    filter(`Series ID` == sample(`Series ID`, 1))
+```
+
+TODO
+Write an R function to generate data from an AR(2) model with parameters to be specified by the user. The first line of your function definition should be
+
+ar2 <- function(n, c, phi1, phi2, sigma)
+Here n is the number of observations to simulate, c is the constant, phi1 and phi2 are the AR coefficients and sigma is the standard deviation of the noise.
+
+The noise should be generated using the rnorm() function.
+
+You can set the first two observations equal to c/(1-phi1-phi2). This is the mean of the AR process.
+
+Your function should check that the values of phi1 and phi2 satisfy the stationarity constraints, and if not it should issue a warning. You can use the warning() function for this.
+
+Your function should return a numeric vector of length n containing the generated AR(2) data.
+Please submit your solution as a .R file.
+
+```{r Autoregressive Model}
+ar2 <- function(n, c, phi1, phi2, sigma) {
+    output_vect <- rep(0, n)
+    output_vect1[1] <- c / (1 - phi1 - phi2)
+    output_vect1[2] <- c / (1 - phi1 - phi2)
+
+    for (i in 3:n) {
+       output_vect <- c + phi1 * output_vect[i - 1] + phi2 * output_vect[i - 2]
+    }
+
+    return(output_vect)
+}
+```
