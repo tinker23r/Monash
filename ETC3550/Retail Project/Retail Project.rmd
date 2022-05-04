@@ -1,0 +1,62 @@
+---
+title: "Retail Forecasting Project"
+subtitle: "ETC3550"
+author: "Chelaka Paranahewa"
+output: 
+  pdf_document:
+    fig_crop: false
+---
+```{r setup, echo = FALSE, include = FALSE, warning=FALSE, error=FALSE}
+library(fpp3, warn.conflicts = FALSE)
+set.seed(31455034)
+myseries <- aus_retail %>%
+    # Remove discontinued series
+    filter(!(`Series ID` %in% c(
+        "A3349561R", "A3349883F", "A3349499L", "A3349902A",
+        "A3349588R", "A3349763L", "A3349372C", "A3349450X",
+        "A3349679W", "A3349378T", "A3349767W", "A3349451A"
+    ))) %>%
+    # Select a series at random
+    filter(`Series ID` == sample(`Series ID`, 1))
+```
+
+# Statistical features of Australian Retail
+
+```{r Original Dataset Table, echo = FALSE}
+knitr::kable(head(myseries))
+```
+<!-- Describe dataset -->
+
+```{r Original Dataset Graph, echo = FALSE}
+myseries %>% autoplot(Turnover) +
+    labs(
+        title = "Australia Retail Turnover",
+        subtitle = "Original"
+    ) +
+    ylab("Turnover [million $AUD]")
+```
+<!-- Explain trends like variance -->
+
+```{r Transforming Dataset & Graph}
+guerrero_val <- myseries %>%
+    features(Turnover, features = guerrero)
+myseries %>% autoplot(box_cox(Turnover, guerrero_val$lambda_guerrero)) +
+    labs(
+        title = "Australia Retail Turnover",
+        subtitle = "Box-Cox transformed (Guerrero's method)"
+    ) +
+    ylab("Turnover [million $AUD]")
+```
+
+```{r}
+fit <- myseries %>%
+    # model(ETS(box_cox(Turnover, guerrero_val$lambda_guerrero))) %>%
+    model(
+        Best = ETS(Turnover),
+        Transformed = ETS(box_cox(Turnover, guerrero_val$lambda_guerrero))
+    )
+
+fit %>%
+    select(mable_vars(fit)) %>%
+    glance()
+```
