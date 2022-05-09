@@ -52,7 +52,7 @@ myseries %>% autoplot(box_cox(Turnover, guerrero_val$lambda_guerrero)) +
 fit <- myseries %>%
     # model(ETS(box_cox(Turnover, guerrero_val$lambda_guerrero))) %>%
     model(
-        Best = ETS(Turnover),
+        Original = ETS(Turnover),
         Transformed = ETS(box_cox(Turnover, guerrero_val$lambda_guerrero))
     )
 
