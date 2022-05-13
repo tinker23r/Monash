@@ -1,36 +1,49 @@
+---
+title: "ETC3550 Assignment 8"
+author: "Chelaka Paranahewa"
+output: 
+  pdf_document:
+    fig_crop: false
+---
 ```{r Setup}
 library(fpp3)
 ```
 ```{r Data Preparation}
 vic_tourism <- tourism %>% filter(State == "Victoria")
-vic_tourism %>%
-    filter(Region == "Lakes", Purpose == "Holiday") %>%
-    gg_tsdisplay(plot_type = 'partial')
+# vic_tourism %>%
+#     filter(Region == "Lakes", Purpose == "Holiday") %>%
+#     gg_tsdisplay(plot_type = 'partial')
 ```
 
 ```{r ARIMA Modelling}
 progressr::with_progress(
     fit <- vic_tourism %>%
         model(
-            ARIMA = ARIMA(Trips), 
+            ARIMA = ARIMA(Trips),
             ETS = ETS(Trips)
         )
 )
 ```
 ```{r}
-fit[1, ] %>% gg_tsdisplay()
+progressr::with_progress(
+    ARIMA_forecasts <- fit %>% select(ARIMA) %>% forecast(h = 16)
+)
 
-fit %>% select(ARIMA) %>% forecast(h = 16) %>% autoplot()
-
-
-mel_forc <- fit %>%
+fit %>% filter(Region == "Melbourne")
+ARIMA_forecasts %>%
     filter(Region == "Melbourne") %>%
-    rmarkdown::paged_table()
-hc_forc <- fit %>%
+    autoplot()
+# Number of differences is 1 for all non seasonal comps
+
+
+fit %>% filter(Region == "High Country")
+ARIMA_forecasts %>%
     filter(Region == "High Country") %>%
-    rmarkdown::paged_table()
-mel_forc %>%
-    group_by(Purpose) %>%
-    summarise(mean(.mean)) %>%
-    rmarkdown::paged_table()
+    autoplot()
 ```
+
+From the Melbourne Region, only the business and visiting graphs had seasonal forecasts. Likely because they were the only purposes that had a seasonal period and also note they had no season differences. While the holiday and other both show case a linear forecast which does have 1 seasonal difference but no seasonal period.
+
+From the High Country Region, only the holiday graph shows a strong seasonal forecast which had 1 seasonal difference and a seasonal period of 4. Visiting has a very subtle seasonality with in the first 4 quarters due to it also having a seasonal period of 4 but it does not have any seasonal differences. 
+
+So from the two regions, it seems that the seasonal period and one difference needs to exist in the ARIMA model to drive the seasonality in the forecast. 
