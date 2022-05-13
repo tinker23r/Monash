@@ -1,4 +1,5 @@
 # Retail project
+
 ![](<https://lms.monash.edu/theme/image.php/monash/assign/1651085835/icon>) [Retail forecasting project](https://lms.monash.edu/mod/assign/view.php?id=9680200)
 
 **Objective:** To forecast a real time series using ETS and ARIMA models.
