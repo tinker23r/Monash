@@ -60,3 +60,7 @@ fit %>%
     select(mable_vars(fit)) %>%
     glance()
 ```
+
+```{r}
+
+```

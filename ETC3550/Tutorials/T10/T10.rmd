@@ -1,0 +1,60 @@
+```{r Setup}
+library(fpp3)
+```
+
+# Q11
+```{r Part A}
+gas <- aus_production %>% select(Gas)
+guerrero_val <- gas %>%
+    features(Gas, features = guerrero) %>%
+    pull(lambda_guerrero)
+# gas %>% autoplot(box_cox(Gas, guerrero_val))
+```
+
+```{r Part B}
+gas %>% gg_tsdisplay(
+    box_cox(Gas, guerrero_val) %>% difference(4) %>% difference(1),
+    plot_type = "partial"
+)
+
+fit <- gas %>% model(
+    manual = ARIMA(box_cox(Gas, guerrero_val) ~ pdq(1, 1, 0) + PDQ(0, 1, 2)),
+    automatic = ARIMA(box_cox(Gas, guerrero_val))
+)
+fit %>%
+    select(automatic) %>%
+    report()
+fit %>%
+    glance()
+```
+# Q12
+```{r}
+progressr::with_progress(
+    fit <- tourism %>% model(
+        ARIMA(Trips)
+    )
+)
+fit %>% forecast(h = 16)
+```
+
+```{r}
+pelt %>%
+    gg_tsdisplay(Hare, plot_type = "partial")
+
+y <- c(19520, 82110, 89760, 81660, 15760)
+c <- 30993
+phi <- c(0.82, -0.29, -0.01, -0.22)
+
+# Produce the forecasts
+yhat1 <- c + sum(phi * y)
+yhat2 <- c + sum(phi * c(yhat1, y[1:3]))
+yhat3 <- c + sum(phi * c(yhat1, yhat2, y[1:3]))
+# yhat4 <- c + sum(phi * c(yhat3, y[1:3]))
+
+yhat <- c(yhat1, yhat2, yhat3)
+
+pelt %>%
+    model(ARIMA(Hare ~ 1 + pdq(4, 0, 0))) %>%
+    forecast(h = 3) %>%
+    pull(.mean)
+```

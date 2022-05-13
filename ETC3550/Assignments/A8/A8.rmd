@@ -1,0 +1,36 @@
+```{r Setup}
+library(fpp3)
+```
+```{r Data Preparation}
+vic_tourism <- tourism %>% filter(State == "Victoria")
+vic_tourism %>%
+    filter(Region == "Lakes", Purpose == "Holiday") %>%
+    gg_tsdisplay(plot_type = 'partial')
+```
+
+```{r ARIMA Modelling}
+progressr::with_progress(
+    fit <- vic_tourism %>%
+        model(
+            ARIMA = ARIMA(Trips), 
+            ETS = ETS(Trips)
+        )
+)
+```
+```{r}
+fit[1, ] %>% gg_tsdisplay()
+
+fit %>% select(ARIMA) %>% forecast(h = 16) %>% autoplot()
+
+
+mel_forc <- fit %>%
+    filter(Region == "Melbourne") %>%
+    rmarkdown::paged_table()
+hc_forc <- fit %>%
+    filter(Region == "High Country") %>%
+    rmarkdown::paged_table()
+mel_forc %>%
+    group_by(Purpose) %>%
+    summarise(mean(.mean)) %>%
+    rmarkdown::paged_table()
+```
