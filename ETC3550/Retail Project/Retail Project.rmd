@@ -23,9 +23,11 @@ myseries <- aus_retail %>%
 # Statistical features of Australian Retail
 
 ```{r Original Dataset Table, echo = FALSE}
-knitr::kable(head(myseries))
+knitr::kable(
+    head(myseries),
+    caption = "A few rows of the dataset, Other Retailing in South Australia"
+)
 ```
-<!-- Describe dataset -->
 
 ```{r Original Dataset Graph, echo = FALSE}
 myseries %>% autoplot(Turnover) +
@@ -35,12 +37,22 @@ myseries %>% autoplot(Turnover) +
     ) +
     ylab("Turnover [million $AUD]")
 ```
-<!-- Explain trends like variance -->
 
-```{r Transforming Dataset & Graph}
-guerrero_val <- myseries %>%
-    features(Turnover, features = guerrero)
-myseries %>% autoplot(box_cox(Turnover, guerrero_val$lambda_guerrero)) +
+<!-- Explain trends like variance -->
+Plotting the original dataset, we can see a general trend upwards. The dataset also has a seasonal pattern which during the early 1980 - 1990, was relatively small compared to later years where the spike grows to large proportions. 
+
+# Transformations and Differencings
+
+### ETS Modelling
+
+To prepare the dataset for ETS modelling, the data needs to be tranformed so that the variance across the dataset remains relatively constant. To accomplish this, a Box-Cox transformation can be use. Before a Box-Cox transformation is used, the lambda value needs to be determined which can be caluculted by using the guerrero method. This gives $\lambda = 0.08450315$
+
+```{r Transforming Dataset and Graph for ETS Models}
+ets_lambda <- myseries %>%
+    features(Turnover, features = guerrero) %>%
+    pull(lambda_guerrero)
+
+myseries %>% autoplot(box_cox(Turnover, ets_lambda)) +
     labs(
         title = "Australia Retail Turnover",
         subtitle = "Box-Cox transformed (Guerrero's method)"
@@ -48,19 +60,75 @@ myseries %>% autoplot(box_cox(Turnover, guerrero_val$lambda_guerrero)) +
     ylab("Turnover [million $AUD]")
 ```
 
-```{r}
-fit <- myseries %>%
-    # model(ETS(box_cox(Turnover, guerrero_val$lambda_guerrero))) %>%
-    model(
-        Original = ETS(Turnover),
-        Transformed = ETS(box_cox(Turnover, guerrero_val$lambda_guerrero))
-    )
 
-fit %>%
-    select(mable_vars(fit)) %>%
-    glance()
+# Modelling ARIMA and ETS models
+
+```{r TSCV Training}
+training <- myseries %>%
+    filter(
+        Month < yearmonth("2017 Jan"),
+        Month >= yearmonth("1983 Jan")
+    ) %>%
+    stretch_tsibble(.init = 12, .step = 12) %>%
+    relocate(State, Industry, `Series ID`, .id)
+
+progressr::with_progress(
+    TSCV_model <- training %>%
+        model(
+            Original = ETS(Turnover),
+            Transformed = ETS(box_cox(Turnover, ets_lambda))
+        )
+)
 ```
 
 ```{r}
-ARIMA()
+# training %>%
+#     ACF(Turnover) %>%
+#     autoplot() + labs(subtitle = "Aus Retail")
+# training %>%
+#     ACF(difference(Turnover)) %>%
+#     autoplot() + labs(subtitle = "Dif of Aus Retail")
+
+training %>%
+    mutate(diff_turnover = difference(Turnover, differences = 2)) %>%
+    features(diff_turnover, ljung_box, lag = 12)
+
+myseries %>% autoplot(
+    difference(
+        box_cox(Turnover, ets_lambda),
+        differences = 2
+    )
+)
+myseries %>%
+    ACF(difference(box_cox(Turnover, ets_lambda), differences = 2)) %>%
+    autoplot()
+
+```
+```{r Reporting on TSCV Model}
+# TSCV Accuracy
+TSCV_model %>%
+    forecast(h = 24) %>%
+    accuracy(myseries)
+
+# Training Set Accuracy
+TSCV_model %>%
+    glance()
+
+TSCV_model
+```
+
+
+```{r Unit Root Tests}
+myseries %>% features(Turnover, unitroot_kpss)
+myseries %>% features(Turnover, unitroot_ndiffs)
+myseries %>% features(Turnover, unitroot_nsdiffs)
+```
+
+```{r}
+progressr::with_progress(
+    myseries %>% model(
+        auto = ARIMA(Turnover, stepwise = FALSE, approximation = FALSE),
+        manual = ARIMA(Turnover ~ pdq(1, 0, 1) + PDQ(2, 1, 2))
+    )
+)
 ```
