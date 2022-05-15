@@ -8,6 +8,8 @@ output:
 ---
 ```{r setup, echo = FALSE, include = FALSE, warning=FALSE, error=FALSE}
 library(fpp3, warn.conflicts = FALSE)
+library(knitr, warn.conflicts = FALSE)
+library(progressr, warn.conflicts = FALSE)
 set.seed(31455034)
 myseries <- aus_retail %>%
     # Remove discontinued series
@@ -41,11 +43,34 @@ myseries %>% autoplot(Turnover) +
 <!-- Explain trends like variance -->
 Plotting the original dataset, we can see a general trend upwards. The dataset also has a seasonal pattern which during the early 1980 - 1990, was relatively small compared to later years where the spike grows to large proportions. 
 
+```{r Seasonal Plot of Dataset, echo = FALSE}
+myseries %>%
+    gg_season(Turnover, labels = "both") +
+    labs(
+        y = "Turnover [million $AUD]",
+        title = "Seasonal Plot: Australia Retail Turnover"
+    )
+```
+
+From the seasonal plot, there is a clear increase in retail sales during the month December which suggests that there is strong seasonality with the data. 
+
 # Transformations and Differencings
 
 ### ETS Modelling
 
-To prepare the dataset for ETS modelling, the data needs to be tranformed so that the variance across the dataset remains relatively constant. To accomplish this, a Box-Cox transformation can be use. Before a Box-Cox transformation is used, the lambda value needs to be determined which can be caluculted by using the guerrero method. This gives $\lambda = 0.08450315$
+To prepare the dataset for ETS modelling, the data needs to be tranformed so that the variance across the dataset remains relatively constant. As mentioned before the original dataset does not have a constant seasonal variation, since the beginning has small peaks in the seasonal variation which gradually grow over the course of approximately two decades. 
+
+To stabalise the seasonal variation, a Box-Cox transformation can be use. A Box-Cox transformation needs a value for $\lambda$ to transformed the date. A $\lambda = 0$ will perform a logrithmic tranformation to the data, whereas $\lambda \ne 0$ will perform a exponential transformation. 
+
+```{r, echo=FALSE, eval=FALSE}
+# Natural Log
+myseries %>% autoplot(box_cox(Turnover, 0.0)) +
+    labs(
+        title = "Australia Retail Turnover",
+        subtitle = "Box-Cox transformed (Natural Log)"
+    ) +
+    ylab("Turnover [million $AUD]")
+```
 
 ```{r Transforming Dataset and Graph for ETS Models}
 ets_lambda <- myseries %>%
@@ -60,6 +85,15 @@ myseries %>% autoplot(box_cox(Turnover, ets_lambda)) +
     ylab("Turnover [million $AUD]")
 ```
 
+Using a $\lambda$ value close to 0 such as `r ets_lambda` gives the best transformation that keeps the seasonal variations constant through out the time series. This value was determined by using Guerreor's method and then manually checking values around it to verify its the best value for $\lambda$. 
+
+### ARIMA Modelling
+
+```{r Unit Root Tests}
+myseries %>% features(Turnover, unitroot_kpss)
+myseries %>% features(Turnover, unitroot_ndiffs)
+myseries %>% features(Turnover, unitroot_nsdiffs)
+```
 
 # Modelling ARIMA and ETS models
 
@@ -102,7 +136,6 @@ myseries %>% autoplot(
 myseries %>%
     ACF(difference(box_cox(Turnover, ets_lambda), differences = 2)) %>%
     autoplot()
-
 ```
 ```{r Reporting on TSCV Model}
 # TSCV Accuracy
@@ -115,13 +148,6 @@ TSCV_model %>%
     glance()
 
 TSCV_model
-```
-
-
-```{r Unit Root Tests}
-myseries %>% features(Turnover, unitroot_kpss)
-myseries %>% features(Turnover, unitroot_ndiffs)
-myseries %>% features(Turnover, unitroot_nsdiffs)
 ```
 
 ```{r}
