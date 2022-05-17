@@ -106,7 +106,7 @@ After a first order differencing, the hypothesis test gives a p value of 0.1 whi
 
 Based on Kwiatkowski-Phillips-Schmidt-Shin's Test, we have determined that the data needs differencing to make it stationary, while we tested with a first stage differencing we need to verify this using the unitroot_ndiffs which reveals the number of differencing that is needed. 
 
-```{r ndiffs}
+```{r Num of Diffs}
 myseries %>%
     features(Turnover, unitroot_ndiffs) %>%
     kable(caption = "Number of differences required for a stationary series")
@@ -114,10 +114,13 @@ myseries %>%
 
 According to unitroot_ndiffs the data only needs to perform a first stage differencing. 
 
-```{r nsdiffs}
+```{r Num of Seasonal Diffs}
 myseries %>%
     features(Turnover, unitroot_nsdiffs) %>%
-    kable(caption = "Number of seasonal differences required for a stationary series")
+    kable(
+        caption =
+            "Number of seasonal differences required for a stationary series"
+    )
 ```
 
 According to unitroot_ndiffs the data only needs to perform a first stage seasonal differencing. 
@@ -127,69 +130,62 @@ According to unitroot_ndiffs the data only needs to perform a first stage season
 
 ```{r TSCV Training}
 training <- myseries %>%
-    filter(
-        Month < yearmonth("2017 Jan")
-        # Month >= yearmonth("1983 Jan")
-    ) 
-    # %>%
-    # stretch_tsibble(.init = 12, .step = 12) %>%
-    # relocate(State, Industry, `Series ID`, .id)
+    filter(Month < yearmonth("2017 Jan"))
 
 progressr::with_progress(
-    TSCV_model <- training %>%
+    trained_etsmodel <- training %>%
         model(
             Original = ETS(Turnover ~ error("M") + trend("A") + season("M")),
-            Transformed = ETS(
-                box_cox(Turnover, ets_lambda) ~ error("A") + trend("A") +
-                    season("A")
-            )
+            Transformed = ETS(box_cox(Turnover, ets_lambda) ~ error("A") +
+                trend("A") + season("A"))
         )
 )
-progressr::with_progress(
-    TSCV_model <- training %>%
-        model(
-            Original = ETS(Turnover),
-            Transformed = ETS(box_cox(Turnover, ets_lambda))
-            )
-        
-)
+
+trained_etsmodel %>% select(Original) %>% gg_tsresiduals()
+trained_etsmodel %>% select(Transformed) %>% gg_tsresiduals()
 ```
 
-```{r ARIMA STUFF}
+```{r ARIMA Differencing}
 training %>%
-    mutate(diff_turnover = difference(Turnover, differences = 2)) %>%
+    mutate(diff_turnover = difference(Turnover, differences = 1)) %>%
     features(diff_turnover, ljung_box, lag = 12)
 
 myseries %>% autoplot(
     difference(
         box_cox(Turnover, ets_lambda),
-        differences = 2
+        differences = 1
     )
 )
 myseries %>%
     ACF(difference(box_cox(Turnover, ets_lambda), differences = 2)) %>%
     autoplot()
 ```
+
 ```{r Reporting on TSCV Model}
 # TSCV Accuracy
-TSCV_model %>%
+trained_etsmodel %>%
     forecast(h = 24) %>%
-    accuracy(myseries) %>% view()
+    accuracy(myseries) %>%
+    select(.model, RMSE) %>%
+    view()
 
 # Training Set Accuracy
-# TSCV_model %>%
+# trained_etsmodel %>%
 #     glance()
-TSCV_model %>%
+trained_etsmodel %>%
     glance() %>%
-    arrange(.model) %>%
+    select(.model, AICc) %>%
     view()
 ```
 
 ```{r}
 progressr::with_progress(
-    myseries %>% model(
-        auto = ARIMA(Turnover, stepwise = FALSE, approximation = FALSE),
-        manual = ARIMA(Turnover ~ pdq(1, 0, 1) + PDQ(2, 1, 2))
+    trained_arimamodel <- myseries %>% model(
+        auto = ARIMA(Turnover),
+        manual = ARIMA(Turnover ~ pdq(1, 1, 1) + PDQ(2, 1, 2))
     )
 )
+
+trained_arimamodel %>% select(auto) %>% gg_tsresiduals()
+trained_arimamodel %>% select(manual) %>% gg_tsresiduals()
 ```
