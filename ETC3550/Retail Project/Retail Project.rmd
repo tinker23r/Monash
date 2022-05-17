@@ -89,11 +89,39 @@ Using a $\lambda$ value close to 0 such as `r ets_lambda` gives the best transfo
 
 ### ARIMA Modelling
 
-```{r Unit Root Tests}
-myseries %>% features(Turnover, unitroot_kpss)
-myseries %>% features(Turnover, unitroot_ndiffs)
-myseries %>% features(Turnover, unitroot_nsdiffs)
+To objectively determine if the dataset needs differencing we will use unitroot_kpss, unitroot_ndiffs & unitroot_nsdiffs. 
+```{r KPSS}
+myseries %>%
+    features(Turnover, unitroot_kpss) %>%
+    kable(caption = "Kwiatkowski-Phillips-Schmidt-Shin Test")
 ```
+The KPSS testis performing a hypothesis test to verify that the data is stationary. However, the null hypothesis is rejected since the kpss_pvalue is less than 0.05, hence indicating that the data is not stationary and needs differencing to make it stationary.
+
+
+```{r ndiffs}
+myseries %>%
+    features(Turnover, unitroot_ndiffs) %>%
+    kable(caption = "Number of differences required for a stationary series")
+```
+```{r nsdiffs}
+myseries %>%
+    features(Turnover, unitroot_nsdiffs) %>%
+    kable(caption = "Number of seasonal differences required for a stationary series")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Modelling ARIMA and ETS models
 
@@ -109,20 +137,16 @@ training <- myseries %>%
 progressr::with_progress(
     TSCV_model <- training %>%
         model(
-            Original = ETS(Turnover),
-            Transformed = ETS(box_cox(Turnover, ets_lambda))
+            Original = ETS(Turnover ~ error("M") + trend("A") + season("M")),
+            Transformed = ETS(
+                box_cox(Turnover, ets_lambda) ~ error("M") + trend("A") +
+                    season("M")
+            )
         )
 )
 ```
 
-```{r}
-# training %>%
-#     ACF(Turnover) %>%
-#     autoplot() + labs(subtitle = "Aus Retail")
-# training %>%
-#     ACF(difference(Turnover)) %>%
-#     autoplot() + labs(subtitle = "Dif of Aus Retail")
-
+```{r ARIMA STUFF}
 training %>%
     mutate(diff_turnover = difference(Turnover, differences = 2)) %>%
     features(diff_turnover, ljung_box, lag = 12)
@@ -144,10 +168,12 @@ TSCV_model %>%
     accuracy(myseries)
 
 # Training Set Accuracy
+# TSCV_model %>%
+#     glance()
 TSCV_model %>%
-    glance()
-
-TSCV_model
+    glance() %>%
+    arrange(.model) %>%
+    view()
 ```
 
 ```{r}
