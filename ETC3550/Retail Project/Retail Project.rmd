@@ -56,9 +56,9 @@ From the seasonal plot, there is a clear increase in retail sales during the mon
 
 # Transformations and Differencings
 
-### ETS Modelling
+### Transformations
 
-To prepare the dataset for ETS modelling, the data needs to be tranformed so that the variance across the dataset remains relatively constant. As mentioned before the original dataset does not have a constant seasonal variation, since the beginning has small peaks in the seasonal variation which gradually grow over the course of approximately two decades. 
+To prepare the dataset for ARIMA modelling, the data needs to be tranformed so that the variance across the dataset remains relatively constant. As mentioned before the original dataset does not have a constant seasonal variation, since the beginning has small peaks in the seasonal variation which gradually grow over the course of approximately two decades. 
 
 To stabalise the seasonal variation, a Box-Cox transformation can be use. A Box-Cox transformation needs a value for $\lambda$ to transformed the date. A $\lambda = 0$ will perform a logrithmic tranformation to the data, whereas $\lambda \ne 0$ will perform a exponential transformation. 
 
@@ -73,11 +73,11 @@ myseries %>% autoplot(box_cox(Turnover, 0.0)) +
 ```
 
 ```{r Transforming Dataset and Graph for ETS Models}
-ets_lambda <- myseries %>%
+lambda <- myseries %>%
     features(Turnover, features = guerrero) %>%
     pull(lambda_guerrero)
 
-myseries %>% autoplot(box_cox(Turnover, ets_lambda)) +
+myseries %>% autoplot(box_cox(Turnover, lambda)) +
     labs(
         title = "Australia Retail Turnover",
         subtitle = "Box-Cox transformed (Guerrero's method)"
@@ -85,9 +85,9 @@ myseries %>% autoplot(box_cox(Turnover, ets_lambda)) +
     ylab("Turnover [million $AUD]")
 ```
 
-Using a $\lambda$ value close to 0 such as `r ets_lambda` gives the best transformation that keeps the seasonal variations constant through out the time series. This value was determined by using Guerreor's method and then manually checking values around it to verify its the best value for $\lambda$. 
+Using a $\lambda$ value close to 0 such as `r lambda` gives the best transformation that keeps the seasonal variations constant through out the time series. This value was determined by using Guerreor's method and then manually checking values around it to verify its the best value for $\lambda$. 
 
-### ARIMA Modelling
+### Differencing
 
 To objectively determine if the dataset needs differencing we will use unitroot_kpss, unitroot_ndiffs & unitroot_nsdiffs. 
 ```{r KPSS}
@@ -96,13 +96,13 @@ myseries %>%
     kable(caption = "Kwiatkowski-Phillips-Schmidt-Shin Test")
 
 myseries %>%
-    features(difference(Turnover), unitroot_kpss) %>%
+    features(difference(Turnover, 12), unitroot_kpss) %>%
     kable(caption = "Kwiatkowski-Phillips-Schmidt-Shin Test")
 ```
 
 The KPSS testis performing a hypothesis test to verify that the data is stationary. However, the null hypothesis is rejected since the kpss_pvalue is less than 0.05, hence indicating that the data is not stationary and needs differencing to make it stationary.
 
-After a first order differencing, the hypothesis test gives a p value of 0.1 which is greater than 0.05 which means the null hypothesis is not rejected. Thus making the first difference of the dataset, stationary. 
+After a first order differencing, the hypothesis test gives a p value of 0.10 which is greater than 0.05 which means the null hypothesis is not rejected. Thus making the first difference of the dataset, stationary. 
 
 Based on Kwiatkowski-Phillips-Schmidt-Shin's Test, we have determined that the data needs differencing to make it stationary, while we tested with a first stage differencing we need to verify this using the unitroot_ndiffs which reveals the number of differencing that is needed. 
 
@@ -128,40 +128,188 @@ According to unitroot_ndiffs the data only needs to perform a first stage season
 
 # Modelling ARIMA and ETS models
 
-```{r TSCV Training}
+```{r Creating Training Data, echo=FALSE}
 training <- myseries %>%
     filter(Month < yearmonth("2017 Jan"))
+```
 
+### ETS Modelling
+
+For the ETS models, the best method to short list possible candidate models is to use the AIC values that are outputed after models are trained. AIC, otherwise known as Akaike's Information Criterion, is defined as $AIC = T \log (\frac {SSE} {T}) + 2(k+2)$. Using it to find a model by minimising the AIC will result in a model that is good at forecasting. 
+
+To find the model with the lowest AIC value, we need to check all the different models which can be done by `model(ETS(Turnover))` or manually testing all combinations. 
+
+```{r TSCV Training Short Listing}
 progressr::with_progress(
     trained_etsmodel <- training %>%
         model(
-            Original = ETS(Turnover ~ error("M") + trend("A") + season("M")),
-            Transformed = ETS(box_cox(Turnover, ets_lambda) ~ error("A") +
-                trend("A") + season("A"))
+            # Additive
+            ANN =  ETS(Turnover ~ error("A") + trend("N") + season("N")),
+            ANA =  ETS(Turnover ~ error("A") + trend("N") + season("A")),
+            ANM =  ETS(Turnover ~ error("A") + trend("N") + season("M")),
+            AAN =  ETS(Turnover ~ error("A") + trend("A") + season("N")),
+            AAA =  ETS(Turnover ~ error("A") + trend("A") + season("A")),
+            AAM =  ETS(Turnover ~ error("A") + trend("A") + season("M")),
+            AAdN = ETS(Turnover ~ error("A") + trend("Ad") + season("N")),
+            AAdA = ETS(Turnover ~ error("A") + trend("Ad") + season("A")),
+            AAdM = ETS(Turnover ~ error("A") + trend("Ad") + season("M")),
+
+            # Multiplicative
+            MNN =  ETS(Turnover ~ error("M") + trend("N") + season("N")),
+            MNA =  ETS(Turnover ~ error("M") + trend("N") + season("A")),
+            MNM =  ETS(Turnover ~ error("M") + trend("N") + season("M")),
+            MAN =  ETS(Turnover ~ error("M") + trend("A") + season("N")),
+            MAA =  ETS(Turnover ~ error("M") + trend("A") + season("A")),
+            MAM =  ETS(Turnover ~ error("M") + trend("A") + season("M")), #*
+            MAdN = ETS(Turnover ~ error("M") + trend("Ad") + season("N")),
+            MAdA = ETS(Turnover ~ error("M") + trend("Ad") + season("A")),
+            MAdM = ETS(Turnover ~ error("M") + trend("Ad") + season("M"))
         )
 )
 
-trained_etsmodel %>% select(Original) %>% gg_tsresiduals()
-trained_etsmodel %>% select(Transformed) %>% gg_tsresiduals()
+trained_etsmodel %>%
+    glance() %>%
+    select(.model, AIC, AICc) %>%
+    arrange(AIC) %>%
+    kable()
 ```
 
-```{r ARIMA Differencing}
-training %>%
-    mutate(diff_turnover = difference(Turnover, differences = 1)) %>%
-    features(diff_turnover, ljung_box, lag = 12)
+```{r Top six ets models, echo=FALSE}
+top_ets <- trained_etsmodel %>%
+    glance() %>%
+    select(.model, AIC, AICc) %>%
+    arrange(AIC) %>%
+    head() %>%
+    pull(.model)
+```
 
-myseries %>% autoplot(
-    difference(
-        box_cox(Turnover, ets_lambda),
-        differences = 1
-    )
-)
-myseries %>%
-    ACF(difference(box_cox(Turnover, ets_lambda), differences = 2)) %>%
+By testing all combinations we see that the top 6 ETS models are: `r top_ets`. The list of ETS models can be further reduced by plotting a time series decomposition which shows the relationship between the seasonality and error components. 
+
+```{r SLT Decomposition}
+training %>%
+    model(STL(
+        box_cox(Turnover, lambda) ~
+            trend(window = 13) + season(window = "periodic"),
+        robust = TRUE
+    )) %>%
+    components() %>%
     autoplot()
 ```
 
-```{r Reporting on TSCV Model}
+The decomposition shown in the graph indicates that the time series is multiplicative. Since the transformation done to the dataset was a box_cox transformation using a lambda value of `r lambda` which is closer to 0. And according to the box_cox transofrmation lambda value being zero is a log transformation. Hence the multiplicative decomposition.
+
+So it can be deduced that the time series has a multiplicative relationship both the seasonality and error components which means the final short list of ETS models are: MNM, MAM, MAdM.
+
+```{r TSCV Training, echo=FALSE}
+progressr::with_progress(
+    trained_etsmodel <- training %>%
+        model(
+            MNM = ETS(Turnover ~ error("M") + trend("N") + season("M")),
+            MAM = ETS(Turnover ~ error("M") + trend("A") + season("M")), #*
+            MAdM = ETS(Turnover ~ error("M") + trend("Ad") + season("M"))
+        )
+)
+```
+
+```{r Best ETS model identifier, echo=FALSE}
+ets <- trained_etsmodel %>%
+    select(mable_vars(trained_etsmodel)) %>%
+    glance()
+index <- ets$AIC %>% which.min()
+```
+After short listing, the best ETS model according to the AIC values is a `r ets[[index, ".model"]]` with a AIC value of `r ets[[index, "AICc"]]`
+
+```{r Accuracy of ETS models}
+bind_rows(
+    trained_etsmodel %>%
+        accuracy(),
+    trained_etsmodel %>%
+        forecast(h = "2 years") %>%
+        accuracy(myseries)
+) %>%
+    arrange(MASE) %>%
+    select(-State, -Industry, -ME, -MPE, -ACF1) %>%
+    kable()
+```
+
+After testing the models with the last 2 years of the dataset, the MNM model proves to be the best across RMSE, MAPE and MASE. The MAM and MAdM are also just as good with both tied for second place since their RMSE, MAPE and MASE values are marginally different. 
+
+### ARIMA Modelling
+
+```{r ARIMA Short Listing}
+progressr::with_progress(
+    trained_arimamodel <- training %>% model(
+        auto = ARIMA(box_cox(Turnover, lambda)),
+        manual3003101 = ARIMA(box_cox(Turnover, lambda) ~ 1 + pdq(3, 0, 0) + PDQ(3, 1, 0)),
+        manual2003101 = ARIMA(box_cox(Turnover, lambda) ~ 1 + pdq(2, 0, 0) + PDQ(3, 1, 0)),
+        manual2004101 = ARIMA(box_cox(Turnover, lambda) ~ 1 + pdq(2, 0, 0) + PDQ(4, 1, 0)),
+        manual3003100 = ARIMA(box_cox(Turnover, lambda) ~ 0 + pdq(3, 0, 0) + PDQ(3, 1, 0)),
+        manual2003100 = ARIMA(box_cox(Turnover, lambda) ~ 0 + pdq(2, 0, 0) + PDQ(3, 1, 0)),
+        manual2004100 = ARIMA(box_cox(Turnover, lambda) ~ 0 + pdq(2, 0, 0) + PDQ(4, 1, 0))
+    )
+)
+trained_arimamodel %>%
+    glance() %>%
+    select(.model, AIC, AICc) %>%
+    arrange(AIC) %>%
+    kable()
+
+trained_arimamodel %>% report()
+```
+
+
+```{r, eval=FALSE}
+fit %>%
+    select(AAA) %>%
+    coef()
+features(fit %>% select(AAA), ljung_box, lag = 12, dof = 16)
+ets <- trained_etsmodel %>%
+    select(mable_vars(trained_etsmodel)) %>%
+    glance()
+index <- ets$AIC %>% which.min()
+
+ets[[index, ".model"]]
+ets[[index, "AICc"]]
+fit %>%
+    select(auto) %>%
+    report()
+fit %>%
+    select(MAM) %>%
+    report()
+
+components(trained_etsmodel %>% select(Original)) %>% autoplot()
+```
+
+
+
+
+```{r ARIMA Differencing, warning=FALSE, eval=FALSE}
+training %>%
+    mutate(
+        diff_turnover =
+            difference(box_cox(Turnover, lambda), 12) %>% difference()
+    ) %>%
+    features(diff_turnover, ljung_box, lag = 12)
+
+training %>% gg_tsdisplay(
+    box_cox(Turnover, lambda),
+    plot_type = "partial", lag = 36
+)
+training %>% gg_tsdisplay(
+    difference(box_cox(Turnover, lambda), 12),
+    plot_type = "partial", lag = 36
+)
+training %>% gg_tsdisplay(
+    difference(box_cox(Turnover, lambda), 12) %>% difference(),
+    plot_type = "partial", lag = 36
+)
+
+training %>%
+    ACF(difference(box_cox(Turnover, lambda), 12) %>% difference(), lag_max = 36) %>%
+    autoplot()
+```
+
+```{r Reporting on TSCV Model, eval=FALSE}
 # TSCV Accuracy
 trained_etsmodel %>%
     forecast(h = 24) %>%
@@ -169,23 +317,109 @@ trained_etsmodel %>%
     select(.model, RMSE) %>%
     view()
 
-# Training Set Accuracy
-# trained_etsmodel %>%
-#     glance()
 trained_etsmodel %>%
     glance() %>%
     select(.model, AICc) %>%
     view()
 ```
 
-```{r}
+# TESTING ZONE
+
+```{r, eval=FALSE}
 progressr::with_progress(
-    trained_arimamodel <- myseries %>% model(
-        auto = ARIMA(Turnover),
-        manual = ARIMA(Turnover ~ pdq(1, 1, 1) + PDQ(2, 1, 2))
+    trained_arimamodel <- training %>% model(
+        auto = ARIMA(box_cox(Turnover, lambda)),
+        manual3003101 = ARIMA(box_cox(Turnover, lambda) ~ 1 + pdq(3, 0, 0) + PDQ(3, 1, 0)),
+        manual2003101 = ARIMA(box_cox(Turnover, lambda) ~ 1 + pdq(2, 0, 0) + PDQ(3, 1, 0)),
+        manual2004101 = ARIMA(box_cox(Turnover, lambda) ~ 1 + pdq(2, 0, 0) + PDQ(4, 1, 0)),
+        manual3003100 = ARIMA(box_cox(Turnover, lambda) ~ 0 + pdq(3, 0, 0) + PDQ(3, 1, 0)),
+        manual2003100 = ARIMA(box_cox(Turnover, lambda) ~ 0 + pdq(2, 0, 0) + PDQ(3, 1, 0)),
+        manual2004100 = ARIMA(box_cox(Turnover, lambda) ~ 0 + pdq(2, 0, 0) + PDQ(4, 1, 0))
     )
 )
 
-trained_arimamodel %>% select(auto) %>% gg_tsresiduals()
-trained_arimamodel %>% select(manual) %>% gg_tsresiduals()
+trained_arimamodel %>%
+    forecast(h = 24) %>%
+    accuracy(myseries) %>%
+    arrange(RMSE)
+
+trained_arimamodel %>% accuracy()
+
+trained_arimamodel %>%
+    select(manual2004101) %>%
+    forecast(h = 24) %>%
+    autoplot() + autolayer(myseries %>% filter_index("Dec 2013" ~ .))
+
+training %>% tail()
+myseries %>% tail()
+
+trained_arimamodel %>%
+    glance() %>%
+    arrange(AIC)
+trained_arimamodel %>% glance()
+
+trained_arimamodel %>%
+    select(manual2004100) %>%
+    augment() %>%
+    features(.innov, ljung_box, lag = 36, dof = 6)
+
+trained_arimamodel %>%
+    select(mable_vars(trained_arimamodel)) %>%
+    glance() %>%
+    view()
+
+
+augment(trained_arimamodel) %>% features(.innov, ljung_box, lag = 12, dof = 6)
+
+trained_arimamodel %>%
+    tidy() %>%
+    view()
+
+trained_arimamodel %>%
+    select(auto) %>%
+    report()
+trained_arimamodel %>%
+    select(manual) %>%
+    report()
+
+trained_arimamodel %>%
+    select(auto) %>%
+    gg_tsresiduals()
+trained_arimamodel %>%
+    select(manual) %>%
+    gg_tsresiduals()
 ```
+
+```{r, eval=FALSE}
+training %>%
+    autoplot(
+        difference(difference(
+            box_cox(Turnover, lambda), 12
+        ), 1)
+    )
+training %>%
+    autoplot(
+        difference(difference(box_cox(Turnover, lambda), 12), 1)
+    )
+
+
+
+training %>%
+    ACF(Turnover) %>%
+    autoplot()
+training %>%
+    ACF(box_cox(Turnover, lambda)) %>%
+    autoplot()
+training %>%
+    ACF(difference(difference(Turnover, 12), 1)) %>%
+    autoplot()
+# training %>%
+myseries %>%
+    PACF(difference(box_cox(Turnover, lambda), 12), lag_max = 60) %>%
+    autoplot()
+
+training %>%
+    mutate(diff_close = difference(Turnover)) %>%
+    features(diff_close, ljung_box, lag = 12)
+```
+
