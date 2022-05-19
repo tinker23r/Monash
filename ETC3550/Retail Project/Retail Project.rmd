@@ -56,6 +56,7 @@ From the seasonal plot, there is a clear increase in retail sales during the mon
 
 # Transformations and Differencings
 
+
 ### Transformations
 
 To prepare the dataset for ARIMA modelling, the data needs to be tranformed so that the variance across the dataset remains relatively constant. As mentioned before the original dataset does not have a constant seasonal variation, since the beginning has small peaks in the seasonal variation which gradually grow over the course of approximately two decades. 
@@ -89,7 +90,7 @@ Using a $\lambda$ value close to 0 such as `r lambda` gives the best transformat
 
 ### Differencing
 
-To objectively determine if the dataset needs differencing we will use unitroot_kpss, unitroot_ndiffs & unitroot_nsdiffs. 
+To objectively determine if the dataset needs differencing we will use unitroot_kpss & unitroot_nsdiffs. 
 ```{r KPSS}
 myseries %>%
     features(Turnover, unitroot_kpss) %>%
@@ -236,190 +237,90 @@ After testing the models with the last 2 years of the dataset, the MNM model pro
 
 ### ARIMA Modelling
 
+From section Transformations and Differencings, we know that the dataset needs to transformed and differenced once to make the data stationary. So we can directly plot the ACF and PACF plots of the stationary dataset.
+
+```{r ACF and PACF Plots}
+training %>% gg_tsdisplay(
+    # difference(box_cox(Turnover, lambda), 12) %>% difference(),
+    difference(box_cox(Turnover, lambda), 12),
+    plot_type = "partial", lag = 64
+) + labs(title = "ACF and PACF plots of transformed and differenced Turnover")
+```
+
+The ACF plot shows a decaying sinusoidal pattern and by looking at the PACF the last  siginificant lag is at lag 3  which may suggest a non-seasonal AR(3).
+
+There is exponential decay in the seasonal lags of the PACF which could indicate a seasonal MA(3) component. 
+
+From the ACF and PACF plots we have a possible ARIMA model to start from ARIMA(box_cox(Turnover, lambda) ~ 1 + pdq(3, 0, 0) + PDQ(0, 1, 3))
+
+To get better values we could make the p, P, q & Q values drift by 1 value and also checking with the addition of a constant.
+
 ```{r ARIMA Short Listing}
 progressr::with_progress(
     trained_arimamodel <- training %>% model(
-        auto = ARIMA(box_cox(Turnover, lambda)),
-        manual3003101 = ARIMA(box_cox(Turnover, lambda) ~ 1 + pdq(3, 0, 0) + PDQ(3, 1, 0)),
-        manual2003101 = ARIMA(box_cox(Turnover, lambda) ~ 1 + pdq(2, 0, 0) + PDQ(3, 1, 0)),
-        manual2004101 = ARIMA(box_cox(Turnover, lambda) ~ 1 + pdq(2, 0, 0) + PDQ(4, 1, 0)),
-        manual3003100 = ARIMA(box_cox(Turnover, lambda) ~ 0 + pdq(3, 0, 0) + PDQ(3, 1, 0)),
-        manual2003100 = ARIMA(box_cox(Turnover, lambda) ~ 0 + pdq(2, 0, 0) + PDQ(3, 1, 0)),
-        manual2004100 = ARIMA(box_cox(Turnover, lambda) ~ 0 + pdq(2, 0, 0) + PDQ(4, 1, 0))
+        manual1 =   ARIMA(box_cox(Turnover, lambda) ~ 1 + pdq(3, 0, 0) + PDQ(0, 1, 3)), # nolint
+        manual1v2 = ARIMA(box_cox(Turnover, lambda) ~ 0 + pdq(3, 0, 0) + PDQ(0, 1, 3)), # nolint
+        manual2 =   ARIMA(box_cox(Turnover, lambda) ~ 1 + pdq(2, 0, 0) + PDQ(0, 1, 3)), # nolint
+        manual2v2 = ARIMA(box_cox(Turnover, lambda) ~ 0 + pdq(2, 0, 0) + PDQ(0, 1, 3)), # nolint
+        manual3 =   ARIMA(box_cox(Turnover, lambda) ~ 1 + pdq(2, 0, 1) + PDQ(0, 1, 3)), # nolint
+        manual3v2 = ARIMA(box_cox(Turnover, lambda) ~ 0 + pdq(2, 0, 1) + PDQ(0, 1, 3)), # nolint
+        manual4 =   ARIMA(box_cox(Turnover, lambda) ~ 1 + pdq(3, 0, 0) + PDQ(1, 1, 2)), # nolint
+        manual4v2 = ARIMA(box_cox(Turnover, lambda) ~ 0 + pdq(3, 0, 0) + PDQ(1, 1, 2)), # nolint
+        manual5 =   ARIMA(box_cox(Turnover, lambda) ~ 1 + pdq(2, 0, 0) + PDQ(1, 1, 2)), # nolint
+        manual5v2 = ARIMA(box_cox(Turnover, lambda) ~ 0 + pdq(2, 0, 0) + PDQ(1, 1, 2)) # nolint
     )
 )
+
 trained_arimamodel %>%
     glance() %>%
     select(.model, AIC, AICc) %>%
     arrange(AIC) %>%
     kable()
-
-trained_arimamodel %>% report()
 ```
 
+By checking slightly different variations of the initially obtained ARIMA model we can tell that they are fit the date well since their AIC values are close together.
 
-```{r, eval=FALSE}
-fit %>%
-    select(AAA) %>%
-    coef()
-features(fit %>% select(AAA), ljung_box, lag = 12, dof = 16)
-ets <- trained_etsmodel %>%
-    select(mable_vars(trained_etsmodel)) %>%
-    glance()
-index <- ets$AIC %>% which.min()
-
-ets[[index, ".model"]]
-ets[[index, "AICc"]]
-fit %>%
-    select(auto) %>%
-    report()
-fit %>%
-    select(MAM) %>%
-    report()
-
-components(trained_etsmodel %>% select(Original)) %>% autoplot()
+```{r Accuracy of ARIMA models}
+bind_rows(
+    trained_arimamodel %>%
+        accuracy(),
+    trained_arimamodel %>%
+        forecast(h = "2 years") %>%
+        accuracy(myseries)
+) %>%
+    arrange(MASE) %>%
+    select(-State, -Industry, -ME, -MPE, -ACF1) %>%
+    kable()
 ```
 
+After testing the models with the last 2 years of the dataset, the manualXv2 models performed the best during the testing phase. 
 
+# Best Models
 
+### ETS
+```{r ETS Parameters}
 
-```{r ARIMA Differencing, warning=FALSE, eval=FALSE}
-training %>%
-    mutate(
-        diff_turnover =
-            difference(box_cox(Turnover, lambda), 12) %>% difference()
-    ) %>%
-    features(diff_turnover, ljung_box, lag = 12)
+```
 
-training %>% gg_tsdisplay(
-    box_cox(Turnover, lambda),
-    plot_type = "partial", lag = 36
+### ARIMA
+```{r}
+trained_etsmodel %>% select(-State, -Industry) %>% pivot_longer(everything(),
+    names_to = "Model name",
+    values_to = "Orders"
 )
-training %>% gg_tsdisplay(
-    difference(box_cox(Turnover, lambda), 12),
-    plot_type = "partial", lag = 36
+trained_arimamodel %>% select(-State, -Industry) %>% pivot_longer(everything(),
+    names_to = "Model name",
+    values_to = "Orders"
 )
-training %>% gg_tsdisplay(
-    difference(box_cox(Turnover, lambda), 12) %>% difference(),
-    plot_type = "partial", lag = 36
-)
-
-training %>%
-    ACF(difference(box_cox(Turnover, lambda), 12) %>% difference(), lag_max = 36) %>%
-    autoplot()
 ```
 
-```{r Reporting on TSCV Model, eval=FALSE}
-# TSCV Accuracy
-trained_etsmodel %>%
-    forecast(h = 24) %>%
-    accuracy(myseries) %>%
-    select(.model, RMSE) %>%
-    view()
+```{r}
+# trained_arimamodel %>%
+#     forecast(h = "2 years") %>%
+#     autoplot() + autolayer(myseries %>% filter_index("Dec 2016" ~ .))
+    # autoplot(myseries)
 
-trained_etsmodel %>%
-    glance() %>%
-    select(.model, AICc) %>%
-    view()
+
+augment(trained_arimamodel) %>%
+    features(.innov, ljung_box, lag = 12, dof = 6)
 ```
-
-# TESTING ZONE
-
-```{r, eval=FALSE}
-progressr::with_progress(
-    trained_arimamodel <- training %>% model(
-        auto = ARIMA(box_cox(Turnover, lambda)),
-        manual3003101 = ARIMA(box_cox(Turnover, lambda) ~ 1 + pdq(3, 0, 0) + PDQ(3, 1, 0)),
-        manual2003101 = ARIMA(box_cox(Turnover, lambda) ~ 1 + pdq(2, 0, 0) + PDQ(3, 1, 0)),
-        manual2004101 = ARIMA(box_cox(Turnover, lambda) ~ 1 + pdq(2, 0, 0) + PDQ(4, 1, 0)),
-        manual3003100 = ARIMA(box_cox(Turnover, lambda) ~ 0 + pdq(3, 0, 0) + PDQ(3, 1, 0)),
-        manual2003100 = ARIMA(box_cox(Turnover, lambda) ~ 0 + pdq(2, 0, 0) + PDQ(3, 1, 0)),
-        manual2004100 = ARIMA(box_cox(Turnover, lambda) ~ 0 + pdq(2, 0, 0) + PDQ(4, 1, 0))
-    )
-)
-
-trained_arimamodel %>%
-    forecast(h = 24) %>%
-    accuracy(myseries) %>%
-    arrange(RMSE)
-
-trained_arimamodel %>% accuracy()
-
-trained_arimamodel %>%
-    select(manual2004101) %>%
-    forecast(h = 24) %>%
-    autoplot() + autolayer(myseries %>% filter_index("Dec 2013" ~ .))
-
-training %>% tail()
-myseries %>% tail()
-
-trained_arimamodel %>%
-    glance() %>%
-    arrange(AIC)
-trained_arimamodel %>% glance()
-
-trained_arimamodel %>%
-    select(manual2004100) %>%
-    augment() %>%
-    features(.innov, ljung_box, lag = 36, dof = 6)
-
-trained_arimamodel %>%
-    select(mable_vars(trained_arimamodel)) %>%
-    glance() %>%
-    view()
-
-
-augment(trained_arimamodel) %>% features(.innov, ljung_box, lag = 12, dof = 6)
-
-trained_arimamodel %>%
-    tidy() %>%
-    view()
-
-trained_arimamodel %>%
-    select(auto) %>%
-    report()
-trained_arimamodel %>%
-    select(manual) %>%
-    report()
-
-trained_arimamodel %>%
-    select(auto) %>%
-    gg_tsresiduals()
-trained_arimamodel %>%
-    select(manual) %>%
-    gg_tsresiduals()
-```
-
-```{r, eval=FALSE}
-training %>%
-    autoplot(
-        difference(difference(
-            box_cox(Turnover, lambda), 12
-        ), 1)
-    )
-training %>%
-    autoplot(
-        difference(difference(box_cox(Turnover, lambda), 12), 1)
-    )
-
-
-
-training %>%
-    ACF(Turnover) %>%
-    autoplot()
-training %>%
-    ACF(box_cox(Turnover, lambda)) %>%
-    autoplot()
-training %>%
-    ACF(difference(difference(Turnover, 12), 1)) %>%
-    autoplot()
-# training %>%
-myseries %>%
-    PACF(difference(box_cox(Turnover, lambda), 12), lag_max = 60) %>%
-    autoplot()
-
-training %>%
-    mutate(diff_close = difference(Turnover)) %>%
-    features(diff_close, ljung_box, lag = 12)
-```
-
