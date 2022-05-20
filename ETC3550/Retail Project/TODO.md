@@ -28,9 +28,9 @@ You should produce forecasts of the series using ETS and ARIMA models. Write a r
 - ~~A discussion of the statistical features of the original data.~~
 - ~~Explanation of transformations and differencing used. You should use a unit-root test as part of the discussion.~~
 - ~~A description of the methodology used to create a short-list of appropriate ARIMA models and ETS models. Include discussion of AIC values as well as results from applying the models to a test-set consisting of the last 24 months of the data provided.~~
-- Choose one ARIMA model and one ETS model based on this analysis and show parameter estimates, residual diagnostics, forecasts and prediction intervals for both models. Diagnostic checking for both models should include ACF graphs and the Ljung-Box test.
-- Comparison of the results from each of your preferred models. Which method do you think gives the better forecasts? Explain with reference to the test-set.
-- Apply your two chosen models to the full data set and produce out-of-sample point forecasts and 80% prediction intervals for each model for two years past the end of the data provided.
+- ~~Choose one ARIMA model and one ETS model based on this analysis and show parameter estimates, residual diagnostics, forecasts and prediction intervals for both models. Diagnostic checking for both models should include ACF graphs and the Ljung-Box test.~~
+- ~~Comparison of the results from each of your preferred models. Which method do you think gives the better forecasts? Explain with reference to the test-set.~~
+- ~~Apply your two chosen models to the full data set and produce out-of-sample point forecasts and 80% prediction intervals for each model for two years past the end of the data provided.~~
 - Obtain up-to-date data from the [ABS website (Cat. 8501.0, Table 11)](http://www.abs.gov.au/ausstats/abs@.nsf/mf/8501.0), and compare your forecasts with the actual numbers. How well did you do? [Hint: the readabs package can help in getting the data into R.]
 - A discussion of benefits and limitations of the models for your data.
 

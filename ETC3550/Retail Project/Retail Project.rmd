@@ -13,6 +13,7 @@ output:
 library(fpp3, warn.conflicts = FALSE)
 library(knitr, warn.conflicts = FALSE)
 library(progressr, warn.conflicts = FALSE)
+library(readabs, warn.conflicts = FALSE)
 set.seed(31455034)
 myseries <- aus_retail %>%
     # Remove discontinued series
@@ -23,6 +24,7 @@ myseries <- aus_retail %>%
     ))) %>%
     # Select a series at random
     filter(`Series ID` == sample(`Series ID`, 1))
+# knitr::opts_chunk()
 ```
 
 # Statistical features of Australian Retail
@@ -192,7 +194,8 @@ By testing all combinations we see that the top 6 ETS models are: `r top_ets`. T
 ```{r SLT Decomposition}
 training %>%
     model(STL(
-        box_cox(Turnover, lambda) ~
+        # box_cox(Turnover, lambda) ~
+        Turnover ~
             trend(window = 13) + season(window = "periodic"),
         robust = TRUE
     )) %>%
@@ -260,8 +263,6 @@ To get better values we could make the p, P, q & Q values drift by 1 value and a
 ```{r ARIMA Short Listing}
 progressr::with_progress(
     trained_arimamodel <- training %>% model(
-        # search = ARIMA(box_cox(Turnover, lambda), stepwise = FALSE),
-        # stepwise = ARIMA(box_cox(Turnover, lambda)),
         ARIMA1300013 = ARIMA(box_cox(Turnover, lambda) ~ 1 + pdq(3, 0, 0) + PDQ(0, 1, 3)),
         ARIMA0300013 = ARIMA(box_cox(Turnover, lambda) ~ 0 + pdq(3, 0, 0) + PDQ(0, 1, 3)),
         ARIMA1200013 = ARIMA(box_cox(Turnover, lambda) ~ 1 + pdq(2, 0, 0) + PDQ(0, 1, 3)),
@@ -282,23 +283,7 @@ trained_arimamodel %>%
     kable(caption = "ARIMA Models ranked based on AIC")
 ```
 
-```{r, echo=FALSE, eval=FALSE}
-# TESTING ONLY
-progressr::with_progress(
-    trained_arimamodel <- training %>% model(
-        manual1 = ARIMA(box_cox(Turnover, lambda) ~ pdq(0, 1, 1) + PDQ(2, 1, 2)), # nolint
-        manual2 = ARIMA(box_cox(Turnover, lambda) ~ pdq(0, 1, 2) + PDQ(2, 1, 2)), # nolint
-        manual3 = ARIMA(box_cox(Turnover, lambda) ~ pdq(1, 1, 1) + PDQ(2, 1, 2)), # nolint
-
-        manual4 = ARIMA(box_cox(Turnover, lambda) ~ pdq(2, 1, 0) + PDQ(0, 1, 1)), # nolint
-        manual5 = ARIMA(box_cox(Turnover, lambda) ~ pdq(2, 1, 0) + PDQ(1, 1, 0)), # nolint
-        manual6 = ARIMA(box_cox(Turnover, lambda) ~ pdq(0, 1, 1) + PDQ(0, 1, 1)), # nolint
-        manual7 = ARIMA(box_cox(Turnover, lambda) ~ pdq(0, 1, 1) + PDQ(1, 1, 0)), # nolint
-    )
-)
-```
-
-By checking slightly different variations of the initially obtained ARIMA model we can tell that they are fit the date well since their AIC values are close together.
+By checking slightly different variations of the initially obtained ARIMA model we can tell that ARIMA1300013 and ARIMA1300112 fit the data the best since their AIC values are very low and only 0.13 apart.
 
 ```{r Accuracy of ARIMA models}
 bind_rows(
@@ -313,71 +298,200 @@ bind_rows(
     kable(caption = "Shortlist of the best ARIMA Models ranked on MASE")
 ```
 
-After testing the models with the last 2 years of the dataset, the manualXv2 models performed the best during the testing phase. 
+After testing the models with the last 2 years of the dataset, the ARIMA1300013 and ARIMA1300112 models performed the did not perform the best during the testing phase. 
 
 # Best Models for Forecasting
 
 ### Best ETS Model
 
-```{r MNM Parameters}
-MNM <- trained_etsmodel %>%
-    select(MNM)
+```{r MAM Parameters}
+MAM <- trained_etsmodel %>%
+    select(MAM)
 
-
-MNM %>%
+MAM %>%
     report()
 ```
 
+The best ETS model was the MAM model since it had the lowest AIC value and during the testing set it also had a low MASE score which was not the lowest but relatively close to the best.
 
-```{r MNM Diagnostic}
-MNM %>%
+```{r MAM Diagnostic}
+MAM %>%
     gg_tsresiduals() + labs(title = "ETS Innotvation Residuals Plot")
 
-MNM %>%
+MAM %>%
     augment() %>%
-    features(.innov, ljung_box, lag = 24, dof = 14)
+    features(.innov, ljung_box, lag = 24, dof = 16) %>%
+    kable(caption = "MAM Ljung Box Test")
 ```
 
-```{r}
-MNM_fc <- MNM %>%
+From the innovation residuals plot and its corresponding ACF plot shows that there might still be some correlation that was missed. Which means that model is not perfect and will not provide the most accurate forecasts. With that being said, the the true value will still land with in its forecast interval.
+
+```{r MAM Training Forecast}
+MAM_fc <- MAM %>%
     forecast(h = "2 years")
 
-# MNM %>%
-    # kable(caption = "")
 
-MNM_fc %>%
+MAM_fc %>%
     hilo(level = c(80, 95)) %>%
     select(-.model, -Turnover) %>%
     kable(caption = "ETS Point Forecast and Point Interval (80% & 95%)")
+
+MAM_fc %>%
+    autoplot() +
+    autolayer(myseries %>% filter_index("Dec 2015" ~ .)) +
+    labs(
+        title = "MAM Point Forecast and Point Interval 2 years after 2016 Dec",
+        y = "Turnover [million $AUD]",
+        x = "Month [M]"
+    )
 ```
 
 ### Best ARIMA Model
 
-```{r ARIMA1200013 Parameters}
-ARIMA1200013 <- trained_arimamodel %>%
-    select(ARIMA1200013)
-    
-ARIMA1200013 %>%
+```{r ARIMA1300013 Parameters}
+ARIMA1300013 <- trained_arimamodel %>%
+    select(ARIMA1300013)
+
+trained_arimamodel %>%
+    accuracy() %>%
+    arrange(MASE)
+
+ARIMA1300013 %>%
     report()
 ```
 
-```{r ARIMA1200013 Diagnostic}
-ARIMA1200013 %>%
+The best ARIMA model was model ARIMA1300013 since it had the lowest AIC value and during the testing set it also had a low MASE score which was tied for second place with four other models and it was only 0.002 off first place.
+
+```{r ARIMA1300013 Diagnostic}
+ARIMA1300013 %>%
     gg_tsresiduals() + labs(title = "ARIMA Innotvation Residuals Plot")
 
-ARIMA1200013 %>%
+ARIMA1300013 %>%
     augment() %>%
-    features(.innov, ljung_box, lag = 12, dof = 5)
+    features(.innov, ljung_box, lag = 12, dof = 6) %>%
+    kable(caption = "ARIMA1300013 Ljung Box Test")
 ```
 
-```{r}
-ARIMA1200013_fc <- ARIMA1200013 %>%
+Similar to the ETS model, the innovation residuals plot and its corresponding ACF plot for the ARIMA model also shows that there might still be some correlation that was missed. Which means that model is not perfect and will not provide the most accurate forecasts. With that being said, the the true value will still land with in its forecast interval.
+
+```{r ARIMA1300013 Training Forecast}
+ARIMA1300013_fc <- ARIMA1300013 %>%
     forecast(h = "2 years")
 
-# ARIMA1200013_fc %>% kable(caption = "")
-
-ARIMA1200013_fc %>%
+ARIMA1300013_fc %>%
     hilo(level = c(80, 95)) %>%
     select(-.model, -Turnover) %>%
     kable(caption = "ARIMA Point Forecast and Point Interval (80% & 95%)")
+
+ARIMA1300013_fc %>%
+    autoplot() +
+    autolayer(myseries %>% filter_index("Dec 2015" ~ .)) +
+    labs(
+        title = "ARIMA1300013 Point Forecast and Point Interval 2 years after 2016 Dec",
+        y = "Turnover [million $AUD]",
+        x = "Month [M]"
+    )
+```
+
+# Comparison between ETS and ARIMA Models
+
+```{r Model Comparison}
+bind_rows(
+    ARIMA1300013 %>% accuracy(),
+    MAM %>% accuracy(),
+    ARIMA1300013 %>% forecast(h = 24) %>% accuracy(myseries),
+    MAM %>% forecast(h = 24) %>% accuracy(myseries)
+) %>%
+    select(-ME, -MPE, -ACF1) %>%
+    arrange(MASE) %>%
+    kable(caption = "Comparison between ETS and ARIMA Models")
+```
+
+After forecasting 2 years after the end of the training data, the accuracy of the ETS model triumphs the ARIMA model. The ETS model has a MASE value of 0.7415 while the ARIMA model had 2.1773. 
+
+# Forecasting
+
+```{r Full data training, echo=FALSE}
+with_progress(
+    fit <- myseries %>%
+        model(
+            ARIMA1300013 = ARIMA(
+                box_cox(Turnover, lambda) ~ 1 + pdq(3, 0, 0) + PDQ(0, 1, 3)
+                ),
+            MAM = ETS(Turnover ~ error("M") + trend("A") + season("M"))
+        )
+)
+```
+```{r MAM forecasting}
+fit %>%
+    select(MAM) %>%
+    forecast(h = "2 years") %>%
+    hilo(level = 80) %>%
+    select(-Turnover) %>%
+    kable(
+        caption = "MAM Point Forecast and Point Interval 2 years after 2018 Dec"
+    )
+
+fit %>%
+    select(MAM) %>%
+    forecast(h = "2 years") %>%
+    autoplot() +
+    autolayer(myseries %>% filter_index("Dec 2015" ~ .)) +
+    labs(
+        title = "MAM Point Forecast and Point Interval 2 years after 2018 Dec",
+        y = "Turnover [million $AUD]",
+        x = "Month [M]"
+    )
+```
+
+```{r ARIMA1300013 forecasting}
+fit %>%
+    select(ARIMA1300013) %>%
+    forecast(h = "2 years") %>%
+    hilo(level = 80) %>%
+    select(-Turnover) %>%
+    kable(caption = "ARIMA1300013 Point Forecast and Point Interval 2 years after 2018 Dec")
+
+fit %>%
+    select(ARIMA1300013) %>%
+    forecast(h = "2 years") %>%
+    autoplot() +
+    autolayer(myseries %>% filter_index("Dec 2015" ~ .)) +
+    labs(
+        title = "ARIMA1300013 Point Forecast and Point Interval 2 years after 2018 Dec",
+        y = "Turnover [million $AUD]",
+        x = "Month [M]"
+    )
+```
+
+```{r Forecasting Plot, echo=FALSE}
+fit %>%
+    forecast(h = "2 years") %>%
+    autoplot() +
+    autolayer(myseries %>% filter_index("Dec 2015" ~ .)) +
+    labs(
+        title = "Point Forecast and Point Interval 2 years after 2018 Dec",
+        subtitle = "MAM and ARIMA1300013",
+        y = "Turnover [million $AUD]",
+        x = "Month [M]"
+    )
+```
+
+```{r Comparing the forecasts with real values}
+true_data <- read_abs("8501.0", tables = 11)
+true_data <- true_data %>%
+    filter(series_id == "A3349433W") %>%
+    mutate(Month = yearmonth(date)) %>%
+    select(Month, value) %>%
+    as_tsibble() %>%
+    rename(Turnover = value)
+
+fit %>%
+    forecast(h = "2 years") %>%
+    accuracy(true_data)
+
+fit %>%
+    forecast(h = "2 years") %>%
+    autoplot() +
+    autolayer(true_data %>% filter_index("Dec 2013" ~ .))
 ```
