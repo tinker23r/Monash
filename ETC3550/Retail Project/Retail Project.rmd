@@ -6,14 +6,13 @@ output:
   pdf_document:
     fig_crop: false
 ---
-# TODO
-- Write analysis for Diagnostics
 
 ```{r setup, echo = FALSE, include = FALSE, warning=FALSE, error=FALSE}
 library(fpp3, warn.conflicts = FALSE)
 library(knitr, warn.conflicts = FALSE)
 library(progressr, warn.conflicts = FALSE)
 library(readabs, warn.conflicts = FALSE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 set.seed(31455034)
 myseries <- aus_retail %>%
     # Remove discontinued series
@@ -24,7 +23,6 @@ myseries <- aus_retail %>%
     ))) %>%
     # Select a series at random
     filter(`Series ID` == sample(`Series ID`, 1))
-# knitr::opts_chunk()
 ```
 
 # Statistical features of Australian Retail
@@ -477,7 +475,7 @@ fit %>%
     )
 ```
 
-```{r Comparing the forecasts with real values}
+```{r ABS data, echo = FALSE, include = FALSE, warning=FALSE, error=FALSE}
 true_data <- read_abs("8501.0", tables = 11)
 true_data <- true_data %>%
     filter(series_id == "A3349433W") %>%
@@ -485,7 +483,9 @@ true_data <- true_data %>%
     select(Month, value) %>%
     as_tsibble() %>%
     rename(Turnover = value)
+```
 
+```{r Comparing the forecasts with real values}
 fit %>%
     forecast(h = "2 years") %>%
     accuracy(true_data)
@@ -493,5 +493,16 @@ fit %>%
 fit %>%
     forecast(h = "2 years") %>%
     autoplot() +
-    autolayer(true_data %>% filter_index("Dec 2013" ~ .))
+    autolayer(true_data %>% filter_index("Dec 2015" ~ .)) +
+    labs(
+        title = "Point Forecast and Point Interval 2 years after 2018 Dec",
+        subtitle = "ABSDATA",
+        y = "Turnover [million $AUD]",
+        x = "Month [M]"
+    )
 ```
+
+Checking the MASE of the forecasts and plots of the forecasts, we can tell that ARIMA1300013 did a decent job at predicting Turnover.
+MAM model consistently underestiamted the mean Turnover but the true values were still within the prediction intervals. 
+
+Overall the both models were quite limitting since both the ETS and ARIMA models did not have its residuals as the Ljung Box test which is use to verify that variations between the fitted values and the real data are only due to randomless and not due to unaccounted for correlation. The models were also considerably simpler since a more complex model could potentially better fit the training data and testing data but it could also be negatively effected with its ability to predict futre values. On the other hand a simpler model does not overfit the data which could allow it to better predict. So ultimately the best model would be somewhere in the middle. 
