@@ -1,0 +1,784 @@
+---
+title: "ETC2410 Assignment 1"
+author: "Alex Wong, Chelaka Paranahewa, Harjot Channa, Jonas Tiong"
+head-includes:
+    - \usepackage{mathtools}
+output: 
+  pdf_document:
+    latex_engine: xelatex
+mainfont: Times New Roman
+fontsize: 12pt
+---
+
+```{r, echo = FALSE, include = FALSE}
+library(tidyverse)
+library(dplyr)
+library(broom)
+library(tidymodels)
+library(knitr)
+library(psych)
+library(car)
+```
+
+```{r importing data, echo = FALSE, include = FALSE, warning=FALSE, error=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, error = FALSE, message = FALSE)
+# setwd("C:/Users/chela/GitHub Repo/ETC2410/")
+dat <- read_csv("data_q1_ass1_s1_22.csv")
+```
+
+# Question 1
+
+### (a)
+
+#### (i) 
+Histogram of `logsal`
+
+```{r, warning = FALSE, error = FALSE, echo = FALSE}
+dat %>% ggplot(aes(x = logsal)) +
+    geom_histogram(aes(y = after_stat(density)),
+        bins = 20
+    ) +
+    geom_density() +
+    labs(
+        x = "logsal",
+        y = "Density",
+        title = "Histogram of logsal"
+    )
+```
+
+
+#### (ii)
+```{r, warning = FALSE, error = FALSE, echo = FALSE}
+logsal_stat <- dat$logsal %>%
+    describe() %>%
+    as_tibble() %>%
+    select(c(n, mean, median, min, max, sd, skew, kurtosis))
+
+kable(logsal_stat)
+```
+As the mean is greater than the median, the distribution is positively skewed indicating that there are high valued outliers (those earning high annual wages). Since the skewness is 0.99, we can say that this distribution is moderately skewed.
+
+On average, an individual in this bank will have a log of annual salary of around 10.36 or, in other words, an annual salary of around $e^{10.36} = 31,470.09$. The maximum annual salary, empirically, is around $e^{11.81} = 135,000.00$ and the lowest salary in the bank is around $e^{9.66} = 15,750.00$ That is a difference of around $119,250.00$.
+
+### (b)
+
+#### (i)
+
+Scatterplot of `logsal` and `race`
+```{r, warning = FALSE, error = FALSE, echo = FALSE, fig.align='center'}
+dat %>% ggplot(aes(x = race, y = logsal)) +
+    geom_point() +
+    xlim(-1, 2) +
+    labs(title = "logsal v race")
+```
+
+\begin{align*}
+    \text {race} &: \text {1 if individual i belongs to an ethnic minority, 0 otherwise}\\
+    \text {logsal} &: \text {the natural log of individual i’s annual salary}\\
+\end{align*}
+
+#### (ii)  
+
+Recall from part (a)ii) that the mean of `logsal` was around 10.36. From the scatterplot it is evident that in this bank, an individual who does not belong to an ethnic minority earns in a wide range of salaries from slightly below to 10.0 to slightly above 11.0 (as per where all the data points are clustered). In contrast, for an individual who does belong to an ethnic minority this is range is far smaller, somewhere slightly below 10.0 to around 10.5. Hence, the gap from the mean wage of 10.36 is larger for non-minorities which may suggest larger mobility for this category of employees which would be indicative of racial discrimination.
+
+### (c)
+
+#### (i)
+
+\begin {equation}
+    \widehat{logsal} = \underset{(0.020)}{10.396} - \underset{(0.043)}{0.180} \ race
+\end {equation}
+
+\begin{align*}
+    R^2 &: 0.035414 \\
+    n &: 474 \\
+\end{align*}
+
+```{r, warning = FALSE, error = FALSE, echo = FALSE}
+
+# OLS regression
+fit1 <- lm(logsal ~ race, data = dat)
+# fit1 %>% summary()
+```
+
+#### (ii)
+
+Our null hypothesis is that race has no effect on an individual's annual (log of their) salary in this bank ($\beta_{1} = 0$). The alternative hypothesis is that race has an effect ($\beta_{1} \neq 0$). 
+```{r, warning = FALSE, error = FALSE}
+
+# level of significance
+alpha_1 <- 0.05
+
+# test statistic
+tstat1 <- coef(summary(fit1))[2, "Estimate"] /
+    coef(summary(fit1))[2, "Std. Error"]
+
+# critical value under the null
+tcrit1 <- qt(1 - alpha_1 / 2, 472)
+```
+
+
+\begin{align*}
+    H_0 &: \beta_1 = 0 \\
+    H_1 &: \beta_1 \neq 0 \\
+    \text {Significance Level} &: \alpha = 0.05 \\
+    \text {Test stat and null dist} &: \frac{\hat \beta_1}{se(\hat \beta_1)} \sim t_{n-k-1} = t_{472} \\
+    t_{calc} &= `r abs(tstat1)` \\
+    t_{crit} &= `r tcrit1` \\
+    \text {Decision rule} &: \text {reject $H_0$ if $|t_{calc}| > t_{crit}$} \\
+    \text {Decision} &: \text {Since `r abs(tstat1)` > `r tcrit1`, reject $H_0$} \\
+\end{align*}
+
+In conclusion, at 0.05 level of significance, we reject the null hypothesis that race has no effect on (the log of) an individual's annual salary in favour of the alternative hypothesis race has an effect.
+
+#### (iii)  
+
+$\hat{\beta_{1}}$ measures the average difference in the log of an individual's annual salary in the bank (thus proportionate difference) between someone who belongs to an ethnic minority and someone who does not.
+
+Hence, the average difference, according to our model, in an individual's annual salary between someone who belongs to an ethnic minority is $e^{-0.180}$ times the annual salary of someone who does not belong to an ethnic minority. Or, in other words, the average difference of the log annual salary is that someone who does not belong to an ethnic minority earns $-0.180$ more than someone who is part of ethnic minority.
+
+#### (iv)  
+
+This model does not provide conclusive evidence of racial discrimination in salaries paid by the bank. This is because it does not account for (condition on) confounding variables - variables that causally effect an individual's annual salary and whether they belong to an ethnic minority. For example, an individual's level of education may be a variable of interest; the individual may be an immigrant to which US' immigration policy and its skill stream for accepting immigrants (based on education) may decide whether or not someone (in America) belongs to an ethnic minority. And, for an individual's annual salary, may be effected by if the company values (and thus willing to pay wages that are higher) for someone based on the education that they have. 
+
+#### (v)  
+
+As the coefficient of determination is around $R^2 = 0.035$, this means that around 3.5 per cent of the sample variation in the log of an individual's annual salary is explained by race in this bank. Hence, this model is a very low fit for describing what variables effect an individual's annual salary, where the remaining 96.5 per cent may be caused be unaccounted for variables like education (as aforementioned) or inherent variability. 
+
+```{r, warning = FALSE, error = FALSE}
+
+SSR1 <- sum(resid(fit1)^2)
+SST1 <- sum((dat$logsal - mean(dat$logsal))^2)
+
+R2_1 <- 1 - (SSR1) / SST1
+R2_1
+```
+
+#### (vi)  
+
+$\beta_{0}$ measures the conditional mean of the log of an individual's annual salary in this bank who does not belong to an ethnic minority. This value is 10.396.
+In other words, the conditional mean of an individual's annual salary who is not part of of ethnic minority is $e^{10.396}$.
+
+#### (vii)
+
+```{r, warning = FALSE, error = FALSE}
+LB1 <- coef(summary(fit1))[1, "Estimate"] -
+    coef(summary(fit1))[1, "Std. Error"] * qt(1 - alpha_1 / 2, 472)
+
+UP1 <- coef(summary(fit1))[1, "Estimate"] +
+    coef(summary(fit1))[1, "Std. Error"] * qt(1 - alpha_1 / 2, 472)
+
+confint1 <- cbind(LB1, UP1) %>%
+    as_tibble() %>%
+    rename(
+        "2.5 %" = LB1,
+        "97.5 %" = UP1
+    )
+```
+\begin{align*}
+    \text {Confidence interval} &: (\hat \beta_0 - t_{472@0.025} se(\hat \beta_0), \hat \beta_0 + t_{472@0.025} se(\hat \beta_0))\\
+    &: (`r coef(summary(fit1))[1, "Estimate"]` - `r qt(1 - alpha_1 / 2, 472)` \times `r coef(summary(fit1))[1, "Std. Error"]`, `r coef(summary(fit1))[1, "Estimate"]` + `r qt(1 - alpha_1 / 2, 472)` \times `r coef(summary(fit1))[1, "Std. Error"]`) \\
+    &: (`r LB1`, `r UP1`)
+\end{align*}
+
+```{r}
+# confint1 %>% kable()
+
+# confint(fit1, level = 0.95)
+```
+
+#### (viii)  
+
+We are 95 per cent confident, on average, that the population mean of the the log of an individual's annual salary in this bank for someone who does not belong to an ethnic minority is between 10.356 and 10.436. That is, 95 per cent of the time, the interval between $e^{10.356}$ and $e^{10.436}$ will contain the population mean of an individual's annual salary in this bank for someone who does not belong to a ethnic minority. 
+
+#### (ix)  
+
+Since $\beta_{0} = 0$, in a hypothesis test of individual significance at  0.05, does not fall within the 95 per cent confidence interval ${10.356, 10.436}$ we conclude that $\hat{\beta_{0}}$ is statistically significant. That is, we reject the null hypothesis that $\beta_{0} = 0$ for the alternative hypothesis that $\beta_{0} \neq 0$.
+
+### (d)
+
+#### (i)
+\begin {equation}
+    \widehat{logsal} = \underset{(0.390)}{4.026} + \underset{(0.004)}{0.024} \ educ \ + \ \underset{(0.045)}{0.601} \ logssal \ + \ \underset{(0.019)}{0.061} \  gender \ - \ \underset{(0.019)}{0.043} \ race \ + \underset{(0.016)}{0.121}  \ jobcat
+\end {equation}
+
+\begin{align*}
+    R^2 &: 0.826101 \\
+    n &: 474 \\
+\end{align*}
+
+
+```{r, warning = FALSE, error = FALSE}
+# OLS regression
+fit2 <- lm(logsal ~ educ + logssal + gender + race + jobcat, data = dat)
+# fit2 %>% summary()
+```
+
+#### (ii)  
+
+A regressor is individually insignificant at 0.01 level of significance if its p-value is larger than 0.01, $\textrm{p-value} > 0.01$.
+So according to our model only race is individually insignificant at this level as $\textrm{p-value}_{race} = 0.027 > 0.01$.
+
+#### (iii)
+
+```{r, warning = FALSE, error = FALSE}
+
+# level of significance
+alpha_2 <- 0.05
+
+# unrestricted model
+fit2.UR <- lm(logsal ~ educ + logssal + gender + race + jobcat, data = dat)
+# fit2.UR %>% summary()
+
+# restricted model
+fit2.R <- lm(logsal ~ logsal, data = dat)
+# fit2.R %>% summary()
+
+# Sum of squared residuals
+SSR2.UR <- sum(resid(fit2.UR)^2)
+SSR2.R <- sum(resid(fit2.R)^2)
+
+# degrees of freedom
+DF2_num <- df.residual(fit2.R) - df.residual(fit2.UR) # no. of restrictions = 5
+DF2_denom <- df.residual(fit2.UR) # degrees of freedom of UR linear model = 468
+
+# test statistic
+tstat2 <- ((SSR2.R - SSR2.UR) / DF2_num) / ((SSR2.UR) / DF2_denom)
+# ~ F(5, 468)
+
+# critical value
+fcrit2 <- qf(1 - alpha_2 / 2, DF2_num, DF2_denom)
+
+# decision
+# tstat2 > fcrit2
+```
+
+\begin{align*}
+    H_0 &: \beta_1 = \beta_2 = \beta_3 = \beta_4 = \beta_5 = 0 \\
+    H_1 &: \underset{i \in \{1, 2, 3, 4, 5\}}{\exists} {\beta_i} \neq 0 \text {at least one regressor coef is zero}\\
+    \text {Significance Level} &: \alpha = 0.05 \\
+    \text {Unresticted Model} &: \widehat{logsal} = \underset{(0.390)}{4.026} + \underset{(0.004)}{0.024} educ + \underset{(0.045)}{0.601} logssal + \underset{(0.019)}{0.061} gender \\
+    & - \underset{(0.019)}{0.043} race + \underset{(0.016)}{0.121} jobcat\\
+    \text {Resticted Model} &: \widehat{logsal} = \underset{(0.018)}{10.357}\\
+    \text {Test stat and null dist} &: \frac{(SSR_R - SSR_{UR})}{SSR_{UR}} \frac{(n-k-1)}{q} \sim F_{(q, n-k-1)} = F_{5, 468} \\
+    F_{calc} &= `r tstat2` \\
+    F_{crit} &= `r fcrit2` \\
+    \text {Decision rule} &: \text {reject $H_0$ if $t_{calc} > F_{crit}$} \\
+    \text {Decision} &: \text {Since `r tstat2` > `r fcrit2`, reject $H_0$} \\
+\end{align*}
+
+In conclusion, at 0.05 level of significance, we reject the null hypothesis that an individual's number of years of education, their gender, the job category within the bank, their log of their starting annual salary, and if they belong to an ethnic minority are jointly insignificant in effecting (the log of an) individual's annual salary in favour of the alternative hypothesis that at least one of these variables are significant.
+
+#### (iv)  
+
+$\hat{\beta_{4}}$ measures the average difference in the log of an individual's annual salary in the bank (thus proportionate difference) between someone who belongs to an ethnic minority and someone who does not, controlling for the the number of years of education, the gender, the job category within the bank, and the log of an individual's starting salary.
+
+Hence *this* average difference is $-0.043$; someone who does not belong to an ethnic minority, ceteris paribus, earns $0.043$ more in annual log salary than someone does. In other words, for an individual who belongs to an ethnic minority, he/she earns $e^{-0.043}$ times the annual salary of someone who does not belong an ethnic minority, on average, ceteris paribus.
+
+#### (v)
+
+```{r, warning = FALSE, error = FALSE}
+# coef(summary(fit2))[4, "Estimate"] - coef(summary(fit2))[5, "Estimate"]
+```
+
+$\hat{\beta_{3}} - \hat{\beta_{4}} = 0.103$. This means that an individual in the bank who is male and does not belong to an ethnic minority, on average controlling for education, their starting salary, and job category, earns 0.103 more than a female and does belong to an ethnic minority in (the log of) their annual salary. In other words, a male who does not belong to an ethnic minority earns $e^{0.103}$ times their counterpart (female and belongs to an ethnic minority) annually in salaries, on average, controlling for education, their starting salary, and job category.
+
+#### (vi)  
+
+It is likely that this model does provide conclusive evidence of racial discrimination in salaries paid by the bank, as per the individual significance of the regression coefficient for `race` and the joint significance of all regressors. This is because the model takes into account possible confounding variables to `race` and `logsal` — years of education, one's gender, the job category, and the (log of) starting salary — which would allow us to make causal statements about an individual's racial status on the (log of their) annual salary. In other words, we are unlikely to have committed **omitted variable bias** in this model by our specification of variables.
+
+#### (vii)  
+
+The new model has $R^{2} = 0.826$, meaning around 82.6 per cent of the sample variation in the log of an individual's annual salary is explained by the independent variables. This is a much better comparison to the old model where only 3.5 per cent was explained by the independent variables, leaving much variation unexplained (about a $(0.826 - 0.035) \times 100\% = 79.1 \%$  difference). 
+
+Moreover, given that the variance inflation factor (VIF) is not more than 10, which would be indicative of high correlation between regressors, but rather very small at below 2 for each save `logssal` (at around 4.21), this suggests that our new model has not overspecified and that this $R^{2}$ is not high largely because of adding more variables.
+
+```{r, warning = FALSE, error = FALSE, echo = FALSE}
+cbind(
+    tibble("Model" = c("Old", "New")),
+    tibble(
+        "R-Squared" =
+            c(summary(fit1)$r.squared, summary(fit2)$r.squared)
+    )
+) %>% kable()
+
+vifout <- vif(fit2) %>%
+    as_tibble() %>%
+    rename("VIF" = value)
+tibble("Regressor" = c("educ", "logssal", "gender", "race", "jobcat")) %>%
+    cbind(vifout) %>%
+    kable()
+```
+
+### (e)
+
+We are working with the same model prior:
+
+\begin {equation}
+    \widehat{logsal} = \underset{(0.390)}{4.026} + \underset{(0.004)}{0.024} \ educ \ + \ \underset{(0.045)}{0.601} \ logssal \ + \ \underset{(0.019)}{0.061} \  gender \ - \ \underset{(0.019)}{0.043} \ race \ + \underset{(0.016)}{0.121}  \ jobcat 
+\end {equation}
+
+\begin{align*}
+    R^2 &: 0.826101 \\
+    n &: 474 \\
+\end{align*}
+
+Our null hypothesis is that an individual's gender and race (whether they belong to an ethnic minority) has no effect on the annual (log of their) salary in this bank ($\beta_3 = \beta_4 = 0$). The alternative hypothesis is that it does have an effect ($\beta_3$ and/or $\beta_4$ is non-zero).
+
+```{r, warning = FALSE, error = FALSE}
+
+# level of significance
+alpha_3 <- 0.1
+
+# unrestricted model
+fit3.UR <- lm(logsal ~ educ + logssal + gender + race + jobcat, data = dat)
+
+# restricted model
+fit3.R <- lm(logsal ~ educ + logssal + jobcat, data = dat)
+
+# fit3.UR %>% summary()
+# fit3.R %>% summary()
+
+# Sum of squared residuals
+SSR3.UR <- sum(resid(fit3.UR)^2)
+SSR3.R <- sum(resid(fit3.R)^2)
+
+# degrees of freedom
+DF3_num <- df.residual(fit3.R) - df.residual(fit3.UR) # no. of restrictions = 2
+DF3_denom <- df.residual(fit3.UR) # degrees of freedom of UR linear model = 468
+
+# test statistic
+tstat3 <- ((SSR3.R - SSR3.UR) / DF3_num) / ((SSR3.UR) / DF3_denom)
+# ~ F(2, 468)
+
+# critical value
+fcrit3 <- qf(1 - alpha_3 / 2, DF3_num, DF3_denom)
+
+# decision
+# tstat3 > fcrit3
+```
+
+
+\begin{align*}
+    H_0 &: \beta_3 = \beta_4 = 0 \\
+    H_1 &: \underset{i \in \{3, 4\}}{\exists} {\beta_i} \neq 0 (\beta_3 \ \text {and/or} \beta_4 \textrm {is non zero})\\
+    \text {Significance Level} &: \alpha = 0.1 \\
+    \text {Unresticted Model} &: \widehat{logsal} = \underset{(0.390)}{4.026} + \underset{(0.004)}{0.024} educ +\underset{(0.045)}{0.601} logssal + \underset{(0.019)}{0.061} gender \\
+    & - \underset{(0.019)}{0.043} race + \underset{(0.016)}{0.121} jobcat\\
+    \text {Resticted Model} &: \widehat{logsal} = \underset{(0.356)}{3.439} + \underset{(0.004)}{0.0241} educ + \underset{(0.041)}{0.665} logssal + \underset{(0.016)}{0.117} jobcat\\
+    \text {Test stat and null dist} &: \frac{(SSR_R - SSR_{UR})}{SSR_{UR}} \frac{(n-k-1)}{q} \sim F(q, n-k-1) = F(2, 468) \\
+    F_{calc} &= `r tstat3` \\
+    F_{crit} &= `r fcrit3` \\
+    \text {Decision rule} &: \text {reject $H_0$ if $F_{calc} > F_{crit}$} \\
+    \text {Decision} &: \text {Since `r tstat3` > `r fcrit3`, reject $H_0$} \\
+\end{align*}
+In conclusion, at 0.05 level of significance, we reject the null hypothesis that an individual's gender and whether they belong to ethnic minority has no effect on the (log of their) annual salary in favour of the alternative hypothesis that their gender and/or their race does effect the individual's (log of their) annual salary.
+
+### (f)
+
+#### (i)  
+
+Given that 
+$$
+\begin{aligned}
+\mathbb{E}[logsal \mid educ, logssal, gender, race, jobcat] = \beta_{0} + \beta_{1} \ educ + \beta_{2} \ logssal + \beta_{3} \ gender + \beta_{4} \ race \\
++ \beta_{5} \ jobcat
+\end{aligned}
+$$
+then our estimated conditional mean has form:
+$$
+\hat{\beta_{0}} + \hat{\beta_{1}} \ educ + \hat{\beta_{2}} \ logssal + 
+\hat{\beta_{3}} \ gender + \hat{\beta_{4}} \ race + \hat{\beta_{5}} \ jobcat
+$$
+
+For population A, i.e. for the population of female managers with 12 years of education who belong to a racial minority and received a given starting salary, the average `logsal` is:
+
+$$
+\begin{aligned}
+\mathbb{E}[logsal \mid educ = 12, gender = 0, race = 1, jobcat = 3, logssal] = 
+\beta_{0} + \beta_{1}12 + \beta_{2} \ logssal + \beta_{4} + \beta_{5}3 
+\\ 
+= (\beta_{0} + 12\beta_{1} + \beta_{4} + 3\beta_{5}) + \beta_{2} \ logssal
+\end{aligned}
+$$
+
+\begin {equation}
+\mathbb{E}[logsal \mid educ = 12, gender = 0, race = 1, jobcat = 3, logssal] = (\beta_{0} + 12\beta_{1} + \beta_{4} + 3\beta_{5}) + \beta_{2} \ logssal
+\end {equation}
+
+#### (ii)  
+
+Likewise, for population B, i.e. for the population of male managers with 11 years of education who are not members of a ethnic minority and receives the same starting salary as the individuals in population A, the average `logsal` is:
+
+$$
+\begin{aligned}
+\mathbb{E}[logsal \mid educ = 11, gender = 1, race = 0, jobcat = 3, logssal] = 
+\beta_{0} + \beta_{1}11 + \beta_{2} \ logssal + \beta_{3} + \beta_{5}3 
+\\ 
+= (\beta_{0} + 11\beta_{1} + \beta_{3} + 3\beta_{5}) + \beta_{2} \ logssal
+\end{aligned}
+$$
+
+\begin {equation}
+\mathbb{E}[logsal \mid educ = 11, gender = 1, race = 0, jobcat = 3, logssal] = (\beta_{0} + 11\beta_{1} + \beta_{3} + 3\beta_{5}) + \beta_{2} \ logssal
+\end {equation}
+
+#### (iii)  
+
+Given the null hypothesis that the average `logsal` of population A is equal to that of population B 
+$$
+\begin{aligned}
+\mathbb{E}[logsal \mid educ = 12, gender = 0, race = 1, jobcat = 3, logssal] = \\
+\mathbb{E}[logsal \mid educ = 11, gender = 1, race = 0, jobcat = 3, logssal]
+\end{aligned}
+$$, it follows that:
+
+$$
+\begin{aligned}
+\mathbb{E}[logsal \mid educ = 12, gender = 0, race = 1, jobcat = 3, logssal] \\
+- \mathbb{E}[logsal \mid educ = 11, gender = 1, race = 0, jobcat = 3, logssal] = 0
+\end{aligned}
+$$
+
+$$(\beta_{0} + 12\beta_{1} + \beta_{4} + 3\beta_{5}) + \beta_{2} \ logssal - (\beta_{0} + 11\beta_{1} + \beta_{3} + 3\beta_{5}) - \beta_{2} \ logssal = \beta_{1} + \beta_{4} - \beta_{3} = 0$$
+
+So the restriction that follows from the null hypothesis is that $\beta_{1} + \beta_{4} = \beta_{3}$. The negation of this statement is that $\beta_{1} + \beta_{4} \neq \beta_{3}$ which is the alternative hypothesis, where the average `logsal` of population A is not equal to that of population B.
+
+#### (iv)  
+
+Under the null hypothesis, $\beta_{1} + \beta_{4} = \beta_{3}$. So, rearranging to get $\beta_{1} = \beta_{3} - \beta_{4}$ we can substitute this into our unrestricted model (the population model):
+
+$$
+\begin{aligned}
+\mathbb{E}[logsal \mid educ, logssal, gender, race, jobcat] = \beta_{0} + \beta_{1} \ educ + \beta_{2} \ logssal + \beta_{3} \ gender + \beta_{4} \ race \\ 
++ \beta_{5} \ jobcat
+\end{aligned}
+$$
+
+to get:
+
+$$
+\begin{aligned}
+    \beta_{0} + (\beta_{3} - \beta_{4}) \ educ + \beta_{2} \ logssal + \beta_{3} \ gender + \beta_{4} \ race + \beta_{5} \ jobcat 
+    \\ 
+    = \beta_{0} + \beta_{3} \ educ - \beta_{4} \ educ + \beta_{2} \ logssal + \beta_{3} \ gender + \beta_{4} \ race + \beta_{5} \ jobcat
+    \\ 
+    = \beta_{0} + \beta_{2}\ logssal + \beta_{3} (educ + \ gender) +  \beta_{4}(race \ - \ educ) + \beta_{5} \ jobcat 
+\end{aligned}
+$$
+let $U = educ + gender$  and $V = race - educ$, so
+
+\begin {equation}
+    \beta_{0} + \beta_{2} \ logssal + \beta_{3}U + \beta_{4}V + \beta_{5} \ jobcat
+\end {equation}
+
+This expression is our restricted model. We will use these two models for our F-test when we come to test the null hypothesis that $\beta_{1} + \beta_{4} = \beta_{3}$ (tantamount to holding that the two populations A and B have the same `logsal`) against the alternative hypothesis that $\beta_{1} + \beta_{4} \neq \beta_{3}$ (that the two populations A and B do not have the same average `logsal`).
+
+#### (v)
+
+```{r, warning = FALSE, error = FALSE}
+# fit4.UR <- lm(logsal ~ educ + logssal + gender + race + jobcat, data = dat)
+
+U <- dat$educ + dat$gender
+V <- dat$race - dat$educ
+
+fit4.R <- lm(logsal ~ logssal + U + V + jobcat, data = dat)
+
+# fit4.R %>% summary()
+```
+
+So our restricted model is:
+\begin {equation}
+    \widehat{logsal} = \underset{(0.371)}{3.685} + \underset{(0.043)}{0.636} \ logssal + \underset{(0.012)}{0.023}U  - \underset{(0.012)}{0.003}V + \underset{(0.016)}{0.119} jobcat
+\end {equation}
+
+
+#### (vi)
+
+```{r, warning = FALSE, error = FALSE}
+
+# level of significance
+alpha_4 <- 0.1
+
+# unrestricted model
+fit4.UR <- lm(logsal ~ educ + logssal + gender + race + jobcat, data = dat)
+
+# Sum of squared residuals
+SSR4.UR <- sum(resid(fit4.UR)^2)
+SSR4.R <- sum(resid(fit4.R)^2)
+
+# degrees of freedom
+DF4_num <- df.residual(fit4.R) - df.residual(fit4.UR) # no. of restrictions = 1
+DF4_denom <- df.residual(fit4.UR) # degrees of freedom of UR linear model = 468
+
+# test statistic
+tstat4 <- ((SSR4.R - SSR4.UR) / DF4_num) / ((SSR4.UR) / DF4_denom)
+# ~ F(1, 468)
+
+# critical value
+fcrit4 <- qf(1 - alpha_4 / 2, DF4_num, DF4_denom)
+
+# decision
+# tstat4 > fcrit4
+```
+
+<!-- NOTE TO CHANGE THIS LATEX AS THIS ERRONEOUS FROM PREVIOUS MISTAKE! -->
+\begin{align*}
+    H_0 &: \beta_1 + \beta_4 = \beta_3\\
+    H_1 &: \beta_1 + \beta_4 \neq \beta_3\\
+    \text {Significance Level} &: \alpha = 0.1 \\
+    U &: educ + gender\\
+    V &: race - educ\\
+    \text {Unresticted Model} &: \widehat{logsal} = \underset{(0.390)}{4.026} + \underset{(0.004)}{0.024} educ + \underset{(0.045)}{0.601} logssal + \underset{(0.019)}{0.061} gender \\
+    & - \underset{(0.019)}{0.043} race + \underset{(0.016)}{0.121} jobcat\\
+    \text {Resticted Model} &: \widehat{logsal} = \underset{(0.370848)}{3.684869} + \underset{(0.042768)}{0.635941}logssal + \underset{(0.012260)}{0.022563}U - \underset{(0.012137)}{0.002899}V \\
+    & + \underset{(0.015798)}{0.118732} jobcat\\
+    \text {Test stat and null dist} &: \frac{(SSR_R - SSR_{UR})}{SSR_{UR}} \frac{(n-k-1)}{q} \sim F(q, n-k-1) = F(2, 468) \\
+    F_{calc} &= `r tstat4` \\
+    F_{crit} &= `r fcrit4` \\
+    \text {Decision rule} &: \text {reject $H_0$ if $F_{calc} > F_{crit}$} \\
+    \text {Decision} &: \text {Since `r tstat4` > `r fcrit4`, reject $H_0$} \\
+\end{align*}
+In conclusion, at 0.05 level of significance, we reject the null hypothesis that the average of the `logsalary` for population A is the same population B in favour of the alternative hypothesis that they are not equal. In other words, there is a difference between an individual who is female, a manager, with 12 years of education, belongs to an ethnic minority, and has a starting salary *and* an individual who is male, a manager, has 11 years of education, is not an member of a ethnic minority, and also has a starting salary.
+
+### (g)
+
+#### (i)  
+
+By definition, the racial pay gap for males is:
+$$
+\begin{aligned}
+\mathbb{E}[logsal \mid gender = 1, race =1, educ, logssal, jobcat] \\
+- \mathbb{E}[logsal \mid gender = 1, race = 0, educ, logssal, jobcat]
+\end{aligned}
+$$
+
+Given
+$$
+\begin{aligned}
+\mathbb{E}[logsal \mid educ, logssal, gender, race, jobcat] = \beta_{0} + \beta_{1} \ educ + \beta_{2} \ logssal + \beta_{3} \ gender + \beta_{4} \ race \\ 
++ \beta_{5} \ jobcat
+\end{aligned}
+$$
+it follows that:
+
+$$
+\begin{aligned} 
+    \mathbb{E}[logsal \mid gender = 1, race =1, educ, logssal, jobcat] \\
+    - \mathbb{E}[logsal \mid gender = 1, race = 0, educ, logssal, jobcat] \\
+    = \beta_{0} + \beta_{1} \ educ + \beta_{2} \ logssal + \beta_{3} + \beta_{4} + \beta_{5} \ jobcat \\
+    - (\beta_{0} + \beta_{1} \ educ + \beta_{2} \ logssal + \beta_{3} + \beta_{5} \ jobcat) \\ 
+    = \beta_{4}\\
+\end{aligned}
+$$
+
+\begin {multline}
+    \mathbb{E}[logsal \mid gender = 1, race =1, educ, logssal, jobcat] - \mathbb{E}[logsal \mid gender = 1, \\ race = 0, educ, logssal, jobcat] = \beta_{4}
+\end {multline}
+
+So the racial pay gap for males is $\beta_{4}$.
+
+#### (ii)  
+By definition, the racial pay gap for females is:
+$$
+\begin{aligned}
+\mathbb{E}[logsal \mid gender = 0, race =1, educ, logssal, jobcat] \\
+- \mathbb{E}[logsal \mid gender = 0, race = 0, educ, logssal, jobcat
+\end{aligned}
+$$
+Given
+$$
+\begin{aligned}
+\mathbb{E}[logsal \mid educ, logssal, gender, race, jobcat] = \beta_{0} + \beta_{1} \ educ + \beta_{2} \ logssal + \beta_{3} \ gender + \beta_{4} \ race \\
++ \beta_{5} \ jobcat
+\end{aligned}
+$$
+it follows that:
+
+$$
+\begin{aligned}
+    \mathbb{E}[logsal \mid gender = 0, race =1, educ, logssal, jobcat] \\
+    - \mathbb{E}[logsal \mid gender = 0, race = 0, educ, logssal, jobcat] \\ 
+    = \beta_{0} + \beta_{1} \ educ + \beta_{2} \ logssal + \beta_{4} + \beta_{5} \ jobcat \\
+    - (\beta_{0} + \beta_{1} \ educ + \beta_{2} \ logssal + \beta_{5} \ jobcat) \\ 
+    = \beta_{4}\\
+\end{aligned}
+$$
+\begin {multline}
+    \mathbb{E}[logsal \mid gender = 0, race =1, educ, logssal, jobcat] \\
+    - \mathbb{E}[logsal \mid gender = 0, race = 0, educ, logssal, jobcat] = \beta_{4}
+\end {multline}
+So the racial pay gap for females is also $\beta_{4}$.
+
+These results make sense, for another interpretation of $\beta_{4}$ is the partial effect of being in an ethnic minority on the log of an individual's starting salary against not being in an ethnic minority, that is, holding all else constant. Hence, whether or not we are looking at male or female racial pay gap is already accounted for in this model by $\beta_{4}$.
+
+### (h)
+
+#### (i)  
+
+To allow in our model for the racial pay gap to vary by gender, we may introduce the interaction term $race \times gender$, allowing `race` to vary as a function of `gender`. Thus,
+
+\begin {multline}
+    \mathbb{E}[logsal \mid educ, logssal, gender, race, jobcat] = \beta_{0} + \beta_{1} \ educ + \beta_{2} \ logssal + \beta_{3} \ gender \\
+    + \beta_{4} \ race + \beta_{5} \ jobcat + \beta_{6} \ race \times gender
+\end {multline}
+
+#### (ii)  
+
+The racial pay gap for males, controlling for education, starting salary, and job category is:
+$$
+\begin{aligned}
+\mathbb{E}[logsal \mid gender = 1, race =1, educ, logssal, jobcat] \\
+- \mathbb{E}[logsal \mid gender = 1, race = 0, educ, logssal, jobcat]
+\end{aligned}
+$$
+According to our new model, this is
+
+$$
+\begin{aligned}
+    \mathbb{E}[logsal \mid gender = 1, race =1, educ, logssal, jobcat] \\
+    - \mathbb{E}[logsal \mid gender = 1, race = 0, educ, logssal, jobcat] \\ 
+    = \beta_{0} + \beta_{1} \ educ + \beta_{2} \ logssal + \beta_{3} + \beta_{4} + \beta_{5} \ jobcat + \beta_{6} \\
+    - (\beta_{0} + \beta_{1} \ educ + \beta_{2} \ logssal + \beta_{3} + \beta_{5} \ jobcat) \\ 
+    = \beta_{4} + \beta_{6}
+\end{aligned}
+$$
+
+\begin {multline}
+    \mathbb{E}[logsal \mid gender = 1, race =1, educ, logssal, jobcat] \\
+    - \mathbb{E}[logsal \mid gender = 1, race = 0, educ, logssal, jobcat] = \beta_{4} + \beta_{6}
+\end {multline}
+
+So *this* racial pay gap for males is equal to $\beta_{4} + \beta_{6}$.
+
+#### (iii)  
+
+The racial pay grap for females, controlling for education, starting salary, and job category is:
+$$
+\begin{aligned}
+\mathbb{E}[logsal \mid gender = 0, race =1, educ, logssal, jobcat] \\
+- \mathbb{E}[logsal \mid gender = 0, race = 0, educ, logssal, jobcat]
+\end{aligned}
+$$
+According to our new model, this is
+
+$$
+\begin{aligned}
+\mathbb{E}[logsal \mid gender = 0, race =1, educ, logssal, jobcat] \\
+- \mathbb{E}[logsal \mid gender = 0, race = 0, educ, logssal, jobcat] \\ 
+= \beta_{0} + \beta_{1} \ educ + \beta_{2} \ logssal + \beta_{4} + \beta_{5} \ jobcat \\
+- (\beta_{0} + \beta_{1} \ educ + \beta_{2} \ logssal + \beta_{5} \ jobcat) \\ 
+= \beta_{4}
+\end{aligned}
+$$
+
+\begin {multline}
+    \mathbb{E}[logsal \mid gender = 0, race =1, educ, logssal, jobcat] \\
+    - \mathbb{E}[logsal \mid gender = 0, race = 0, educ, logssal, jobcat] = \beta_{4}
+\end {multline}
+
+So *this* racial pay gap for females is equal to $\beta_{4}$.
+
+#### (iv)  
+
+The null hypothesis is that, controlling for education, starting salary, and job category, the racial pay gap for males and females is the same. Hence, from part (h)ii) and part (h)iii) this statement is equivalent to the stating that $\beta_{4} + \beta_{6} = \beta_{4}$ which in other words is to say that $\beta_{6} = 0$.
+
+```{r, warning = FALSE, error = FALSE}
+
+# level of significance
+alpha_5 <- 0.1
+
+# OLS regression
+fit5 <- lm(logsal ~ educ + logssal + gender + race + jobcat + race * gender,
+    data = dat
+)
+
+# test statistic
+tstat5 <- coef(summary(fit5))[7, "Estimate"] /
+    coef(summary(fit5))[7, "Std. Error"]
+# ~t(467)
+
+# critical value under the null
+tcrit5 <- qt(1 - alpha_5 / 2, 467)
+
+# decision
+# abs(tstat5) > tcrit5
+```
+\begin{align*}
+    H_0 &: \beta_6 = 0 \\
+    H_1 &: \beta_6 \neq 0 \\
+    \text {Significance Level} &: \alpha = 0.1 \\
+    \text {Est Reg} &: \underset{(0.390)}{4.026} + \underset{(0.004)}{0.024} educ + \underset{(0.045)}{0.601} logssal + \underset{(0.019)}{0.061} gender - \underset{(0.019)}{0.043} race + \underset{(0.016)}{0.121} jobcat \\
+    \text {Test stat and null dist} &: \frac{\hat \beta_1}{se(\hat \beta_1)} \sim t_{n-k-1} = t_{467} \\
+    t_{calc} &= `r abs(tstat5)` \\
+    t_{crit} &= `r tcrit5` \\
+    \text {Decision rule} &: \text {reject $H_0$ if $|t_{calc}| > t_{crit}$} \\
+    \text {Decision} &: \text {Since `r abs(tstat5)` > `r tcrit5`, reject $H_0$} \\
+\end{align*}
+In conclusion, at 0.10 level of significance, we reject the null hypothesis that, controlling for education, starting salary, and job category, the racial pay gap for males and females is the same in favour of the alternative hypothesis that they are not.
+
+\newpage
+
+# Question 2
+### (a)
+\begin{align*}
+    \hat{u}_i &= residuals \\
+    {\hat{u}}_i &= y_i-{\hat{y}}_i,\ i = 1, 2, ... n && \text {from Assignment Property (7)}\\
+    &= y_i-\left({\hat{\beta}}_o+{\hat{\beta}}_1x_i\right) && \text {by definition } \hat y_i = \hat \beta_0 + \hat \beta_1 x_i\\
+    &= y_i-{\hat{\beta}}_o-{\hat{\beta}}_1x_i
+\end{align*}
+
+\begin{align*}
+    \sum _{i=1}^n \hat{u}_i &= \sum_{i=1}^{n}{y_i - (\hat \beta_0 + \hat \beta_1 x_i)} \\
+    &= \sum_{i=1}^{n}{y_i} - \sum_{i=1}^{n}{(\hat \beta_0 + \hat \beta_1 x_{i})} \\
+    &= \sum_{i=1}^{n}{y_i} - \sum_{i=1}^{n}{\hat \beta_0} - \sum_{i=1}^n{\hat \beta_1 x_{i}} \\
+    &= \sum_{i=1}^{n}{y_i} - \sum_{i=1}^n{\hat \beta_1 x_{i}} - n{\hat \beta_0} && \text {rearranging terms and summing $\hat \beta_0$} \\
+    &= \frac{n}{n} \sum_{i=1}^{n}{y_i} - \frac{n}{n} \sum_{i=1}^n{\hat \beta_1 x_{i}} - n{\hat \beta_0} && \text {times first and second sum by $\frac{n}{n}$} \\
+    &= n \bar y - n \hat \beta_i \bar{x} - n \hat \beta_0 \\
+    &= n \bar y - n \hat \beta_i \bar{x} - n (\bar y - \hat \beta_i \bar{x}) && \text {substituting from Assignment Property (6)} \\
+    &= n \bar y - n \hat \beta_i \bar{x} - n \bar y + n\hat \beta_i \bar{x} \\
+    &= n \bar y - n \bar y - n \hat \beta_i \bar{x} + n\hat \beta_i \bar{x} \\
+    &= 0
+\end{align*}
+
+
+### (b)
+
+\begin{align*}
+    SSR\ \left(b_0,b_1\right) &=\sum_{i=1}^{n}\left(y_i-b_0-b_1x_i\right)^2 \\
+    \left.\frac{\partial SSR\left(b_0,b_1\right)}{\partial b_0}\right|_{{\hat{\beta}}_0,{\hat{\beta}}_1} &= -2\sum_{i=1}^{n}{\left(y_i- \hat \beta_0-\hat \beta_1x_i\right)=0} \\
+    \left.\frac{\partial SSR\left(b_0,b_1\right)}{\partial b_i}\right|_{{\hat{\beta}}_0,{\hat{\beta}}_1} &= -2\sum_{i=1}^{n}{x_i\left(y_i-\hat \beta_0-\hat \beta_1x_i\right)=0} && \text {call this (1)} \\
+    \\
+    {\hat{u}}_i &= y_i-{\hat{y}}_i,\ i = 1, 2, ... n && \text {from Assignment Property (7)}\\
+    &= y_i-\left({\hat{\beta}}_o+{\hat{\beta}}_1x_i\right) && \text {by definition } \hat y_i = \hat \beta_0 + \hat \beta_1 x_i\\
+    &= y_i-{\hat{\beta}}_o-{\hat{\beta}}_1x_i && \text {call this (2)}\\
+\end{align*}
+
+\begin{align*}
+    -2\sum_{i=1}^{n}x_i (\hat u_i) &= 0 && \text {substituting (2) into (1)} \\
+    \sum_{i=1}^{n}x_i \hat u_i &= 0 && \text {call this (3)}
+\end{align*}
+
+Now if 
+$\boldsymbol{x} = \underset{(n \times 1)}{
+\begin{pmatrix}
+    x_{1} \\
+    \vdots \\
+    x_{n}
+\end{pmatrix}}$ and 
+$\boldsymbol{\hat u} =\underset{(n \times 1)}{ 
+\begin{pmatrix}
+    \hat u_{1} \\
+    \vdots \\
+    \hat u_{n}
+\end{pmatrix}}$ then
+the dot product is 
+
+\begin{align*}
+    {\boldsymbol{x' \hat u}} &= \begin{pmatrix} x_{1} && ... && x_{n} \end{pmatrix}
+    \begin{pmatrix} \hat u_{1} \\ \vdots \\ \hat u_{n} \end{pmatrix} \\
+    &= x_1 \hat u_1 +\ ...\ + x_n \hat u_n && \text {just the linear combinations of column vector ${\boldsymbol u}$}\\
+    & && \text {where the scalars are the components of ${\boldsymbol{x}}$} \\
+    &= \sum_{i=1}^{n}x_i \hat u_i \\
+    &= 0 && \text {from (3)}
+\end{align*}

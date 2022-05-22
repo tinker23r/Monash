@@ -1,0 +1,188 @@
+---
+title: "ETC2410 Assignment 2"
+author: "Alex Wong, Chelaka Paranahewa, Harjot Channa, Jonas Tiong"
+
+output: 
+    pdf_document:
+        extra_dependencies: ["mathtools", "amsmath", "flexisym", "breqn"]
+        df_print: kable
+    latex_engine: xelatex
+mainfont: Times New Roman
+fontsize: 12pt
+---
+
+# **Question 2 (31 Marks)**
+
+```{r Setup, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+library(tidyverse)
+library(fpp3)
+library(knitr)
+
+knitr::opts_chunk$set(
+    echo = FALSE,
+    warning = FALSE,
+    error = FALSE,
+    message = FALSE
+)
+
+db <- read.csv2(
+    file = "Assignment 2/Data/HOUSTNSA.csv",
+    sep = ","
+)
+
+db <- db %>%
+    as_tibble() %>%
+    mutate(
+        DATE = yearmonth(DATE),
+        HOUSTNSA = as.numeric(HOUSTNSA)
+    ) %>%
+    as_tsibble()
+
+db$Jan <- ifelse(month(db$DATE) == 1, 1, 0)
+db$Feb <- ifelse(month(db$DATE) == 2, 1, 0)
+db$Mar <- ifelse(month(db$DATE) == 3, 1, 0)
+db$Apr <- ifelse(month(db$DATE) == 4, 1, 0)
+db$May <- ifelse(month(db$DATE) == 5, 1, 0)
+db$Jun <- ifelse(month(db$DATE) == 6, 1, 0)
+db$Jul <- ifelse(month(db$DATE) == 7, 1, 0)
+db$Aug <- ifelse(month(db$DATE) == 8, 1, 0)
+db$Sep <- ifelse(month(db$DATE) == 9, 1, 0)
+db$Oct <- ifelse(month(db$DATE) == 10, 1, 0)
+db$Nov <- ifelse(month(db$DATE) == 11, 1, 0)
+```
+
+## 2(a)
+```{r}
+lmObj <- lm(
+    HOUSTNSA ~ Jan + Feb + Mar + Apr +
+        May + Jun + Jul + Aug + Sep + Oct + Nov,
+    data = db
+)
+# summary(lmObj)
+```
+<!-- Analysis -->
+\begin {dmath}
+    \widehat{HOUSTNSA} =      \underset{(4.196)}{92.871}
+                        \ - \ \underset{(5.911)}{4.592}\ Jan
+                        \ - \ \underset{(5.911)}{1.935}\ Feb
+                        \ + \ \underset{(5.934)}{26.184}\ Mar
+                        \ + \ \underset{(5.934)}{41.452}\ Apr
+                        \ + \ \underset{(5.934)}{46.786}\ May
+                        \ + \ \underset{(5.934)}{46.263}\ Jun
+                        \ + \ \underset{(5.934)}{40.937}\ Jul
+                        \ + \ \underset{(5.934)}{38.714}\ Aug
+                        \ + \ \underset{(5.934)}{32.252}\ Sep
+                        \ + \ \underset{(5.934)}{36.170}\ Oct
+                        \ + \ \underset{(5.934)}{15.600}\ Nov
+\end {dmath}
+
+
+## 2(b)
+```{r}
+db2 <- read.csv2(
+    file = "Assignment 2/Data/HOUSTNSA.csv",
+    sep = ","
+)
+
+db2 <- db2 %>%
+    as_tibble() %>%
+    mutate(
+        DATE = yearmonth(DATE),
+        HOUSTNSA = as.numeric(HOUSTNSA)
+    ) %>%
+    as_tsibble()
+
+db2$Feb <- ifelse(month(db2$DATE) == 2, 1, 0)
+db2$Mar <- ifelse(month(db2$DATE) == 3, 1, 0)
+db2$Apr <- ifelse(month(db2$DATE) == 4, 1, 0)
+db2$May <- ifelse(month(db2$DATE) == 5, 1, 0)
+db2$Jun <- ifelse(month(db2$DATE) == 6, 1, 0)
+db2$Jul <- ifelse(month(db2$DATE) == 7, 1, 0)
+db2$Aug <- ifelse(month(db2$DATE) == 8, 1, 0)
+db2$Sep <- ifelse(month(db2$DATE) == 9, 1, 0)
+db2$Oct <- ifelse(month(db2$DATE) == 10, 1, 0)
+db2$Nov <- ifelse(month(db2$DATE) == 11, 1, 0)
+db2$Dec <- ifelse(month(db2$DATE) == 12, 1, 0)
+
+lmObj2 <- lm(
+    HOUSTNSA ~ Feb + Mar + Apr + May + Jun +
+        Jul + Aug + Sep + Oct + Nov + Dec,
+    data = db2
+)
+# summary(lmObj2)
+```
+<!-- Analysis -->
+### Steps
+In order to formulate the linear regression, first we need to determine the intercept:
+From equation 1 we can determine the values of each month because of the dummy variables.
+$92.871 - 4.592  = c \rightarrow c = 88.280$, where the LHS is the month of Jan from calculated from equation 1. 
+
+Next we need to determine the $\beta$ values for Feb - Dec. Since we know the intercept for the new equation, we can substitute it in.
+\begin {align*}
+92.871 + 1.935  &= 88.280 + \beta_2 \ Feb  \\ 
+                &\rightarrow \ \beta_2 = 2.656 \\
+                \\
+92.871 + 26.184 &= 88.280 + \beta_3 \ Mar  \\ 
+                &\rightarrow \ \beta_3 = 30.776 \\
+                \\
+92.871 + 41.452 &= 88.280 + \beta_4 \ Apr  \\ 
+                &\rightarrow \ \beta_4 = 46.044 \\
+                \\
+92.871 + 46.786 &= 88.280 + \beta_5 \ May  \\ 
+                &\rightarrow \ \beta_5 = 51.377 \\
+                \\
+92.871 + 46.263 &= 88.280 + \beta_6 \ Jun  \\ 
+                &\rightarrow \ \beta_6 = 50.855 \\
+                \\
+92.871 + 40.937 &= 88.280 + \beta_7 \ Jul  \\ 
+                &\rightarrow \ \beta_7 = 45.528 \\
+                \\
+92.871 + 38.714 &= 88.280 + \beta_8 \ Aug  \\ 
+                &\rightarrow \ \beta_8 = 43.306 \\
+                \\
+92.871 + 32.252 &= 88.280 + \beta_9 \ Sep  \\ 
+                &\rightarrow \ \beta_9 = 36.844 \\
+                \\
+92.871 + 36.170 &= 88.280 + \beta_10 \ Oct \\ 
+                &\rightarrow \ \beta_{10} = 40.762 \\
+                \\
+92.871 + 15.600 &= 88.280 + \beta_11 \ Nov \\ 
+                &\rightarrow \ \beta_{11} = 20.192 \\
+                \\
+92.871          &= 88.280 + \beta_12 \ Dec \\ 
+                &\rightarrow \ \beta_{12} = 4.592 \\
+                \\
+\end {align*}
+
+\begin {dmath}
+    \widehat{HOUSTNSA} =      88.280
+                        \ + \ 2.656 \ Feb
+                        \ + \ 30.776\ Mar
+                        \ + \ 46.044\ Apr
+                        \ + \ 51.377\ May
+                        \ + \ 50.855\ Jun
+                        \ + \ 45.528\ Jul
+                        \ + \ 43.306\ Aug
+                        \ + \ 36.844\ Sep
+                        \ + \ 40.762\ Oct
+                        \ + \ 20.192\ Nov
+                        \ + \ 4.592 \ Dec
+\end {dmath}
+
+## 2(c)
+```{r}
+
+```
+<!-- Analysis -->
+
+## 2(d)
+```{r}
+
+```
+<!-- Analysis -->
+
+## 2(e)
+```{r}
+
+```
+<!-- Analysis -->
