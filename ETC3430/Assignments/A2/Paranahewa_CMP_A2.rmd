@@ -1,0 +1,18 @@
+---
+title: "ETC3430 Assignment 2"
+author: "Chelaka Paranahewa"
+output: 
+  pdf_document:
+    fig_crop: false
+---
+    
+```{r Setup, echo=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(glue)
+set.seed(31455034)
+```
+
+```{r}
+getwd()
+
+```
