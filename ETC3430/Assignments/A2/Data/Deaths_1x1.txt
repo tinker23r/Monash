@@ -1,5 +1,3 @@
-Finland, Deaths (period 1x1), 	Last modified: 02 Aug 2021;  Methods Protocol: v6 (2017)
-
   Year          Age             Female            Male           Total
   1878           0              6068.00         7257.00        13325.00
   1878           1              2398.00         2400.00         4798.00
