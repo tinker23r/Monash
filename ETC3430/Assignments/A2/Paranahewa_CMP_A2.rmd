@@ -55,18 +55,22 @@ FNN is applied to ages 0 to 89.
 # Question 1
 
 ```{r LC Model}
+# Given Data limit
 age <- 100
 year <- 2015 - 1975 + 1
+
 a <- numeric()
 for (x in 1:age) {
     a[x] <- mean(log(as.numeric(m[x, ])))
 }
+
 info <- array(NA, c(age, year))
 for (x in 1:age) {
     for (t in 1:year) {
         info[x, t] <- log(as.numeric(m[x, t])) - a[x]
     }
 }
+
 pca <- svd(info, 1, 1)
 b <- pca$u / sum(pca$u)
 k <- sum(pca$u) * pca$d[1] * pca$v
@@ -77,6 +81,7 @@ mu <- (k[year] - k[1]) / (year - 1)
 m <- cbind(m, array(NA, c(100, 35))) %>% as_tibble()
 colnames(m) <- 1975:2050
 for (t in 1:35) {
+    # K
     k[year + t] <- k[year + t - 1] + mu
     for (x in 1:age) {
         # mx,t = ax + bx*kt
@@ -107,16 +112,22 @@ kvalues %>% autoplot() + labs()
 ```
 
 ```{r LC Model Simulation, eval=FALSE}
+simulation_size <- 1000
+
 sigma <- sd(k[2:year] - k[1:(year - 1)])
-mf <- array(NA, c(age, year + 30, 1000))
-kf <- array(NA, c(year + 30, 1000))
-for (z in 1:1000) {
-    mf[1:age, 1:year, z] <- m[1:age, 1:year]
-    kf[1:year, z] <- k[1:year]
-    for (t in 1:30) {
-        kf[year + t, z] <- kf[year + t - 1, z] + mu + sigma * rnorm(1)
+m_future <- array(NA, c(age, year + 35, simulation_size))
+k_future <- array(NA, c(year + 35, simulation_size))
+
+
+for (z in 1:simulation_size) {
+    m_future[1:age, 1:year, z] <- m[1:age, 1:year]
+    k_future[1:year, z] <- k[1:year]
+    for (t in 1:35) {
+        
+        # Random walk with drift
+        k_future[year + t, z] <- k_future[year + t - 1, z] + mu + sigma * rnorm(1)
         for (x in 1:age) {
-            mf[x, year + t, z] <- exp(a[x] + b[x] * kf[year + t, z])
+            m_future[x, year + t, z] <- exp(a[x] + b[x] * k_future[year + t, z])
         }
     }
 }
