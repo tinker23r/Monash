@@ -8,7 +8,8 @@ output:
 
 ```{r Setup, echo=FALSE, warning=FALSE, message=FALSE}
 library(tidyverse)
-library(glue)
+library(knitr)
+library(fpp3)
 set.seed(31455034)
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ```
@@ -25,6 +26,7 @@ death <- read.delim(file = "Data/Deaths_1x1.txt", sep = "") %>%
     rename(deaths = Total)
 
 
+# Limiting to Years 1975 - 2015 & Ages 0 - 99
 exposure <- read.delim(file = "Data/Exposures_1x1.txt", sep = "") %>%
     as_tibble() %>%
     filter(1975 <= Year, Year <= 2015, Age != "110+") %>%
@@ -40,28 +42,29 @@ data <- merge(death, exposure) %>%
     mutate(CRM = deaths / exposures)
 
 
-m <- matrix(data = data$CRM, nrow = 100, ncol = 2015 - 1975 + 1, byrow = TRUE)
-# head(m)
+m <- matrix(
+    data = data$CRM, nrow = 100, ncol = 2015 - 1975 + 1, byrow = TRUE
+) %>% as_tibble()
+colnames(m) <- 1975:2015
 ```
 
 LC is applied to ages 0 to 99.
 CBD is applied to ages 60 to 99.
 FNN is applied to ages 0 to 89.
 
-# Question 1 \[5 marks\]
+# Question 1
 
 ```{r LC Model}
-age <- 99
+age <- 100
 year <- 2015 - 1975 + 1
 a <- numeric()
 for (x in 1:age) {
-    a[x] <- mean(log(m[x, 1:year]))
+    a[x] <- mean(log(as.numeric(m[x, ])))
 }
 info <- array(NA, c(age, year))
-# head.matrix(info)
 for (x in 1:age) {
     for (t in 1:year) {
-        info[x, t] <- log(m[x, t]) - a[x]
+        info[x, t] <- log(as.numeric(m[x, t])) - a[x]
     }
 }
 pca <- svd(info, 1, 1)
@@ -69,23 +72,68 @@ b <- pca$u / sum(pca$u)
 k <- sum(pca$u) * pca$d[1] * pca$v
 ```
 
-```{r}
+```{r Projecting LC Model}
 mu <- (k[year] - k[1]) / (year - 1)
+m <- cbind(m, array(NA, c(100, 35))) %>% as_tibble()
+colnames(m) <- 1975:2050
 for (t in 1:35) {
     k[year + t] <- k[year + t - 1] + mu
-    m <- cbind(m, array(NA, 100))
     for (x in 1:age) {
+        # mx,t = ax + bx*kt
         m[x, year + t] <- exp(a[x] + b[x] * k[year + t])
     }
 }
-
-m[, year:(year+35)]
 ```
 
-```{r CBD Model}
+```{r plots}
+cbind(0:99, a %>% as_tibble()) %>%
+    as_tibble() %>%
+    ggplot() +
+    geom_line(aes(x = `0:99`, y = value)) +
+    labs(title = "a")
+
+cbind(0:99, b %>% as_tibble()) %>%
+    as_tibble() %>%
+    ggplot() +
+    geom_line(aes(x = `0:99`, y = V1)) +
+    labs(title = "b")
+
+kvalues <- tsibble(
+    Year = 1975:2050,
+    K = k,
+    index = Year
+)
+kvalues %>% autoplot() + labs()
 ```
 
-# Question 2 \[5 marks\]
+```{r LC Model Simulation, eval=FALSE}
+sigma <- sd(k[2:year] - k[1:(year - 1)])
+mf <- array(NA, c(age, year + 30, 1000))
+kf <- array(NA, c(year + 30, 1000))
+for (z in 1:1000) {
+    mf[1:age, 1:year, z] <- m[1:age, 1:year]
+    kf[1:year, z] <- k[1:year]
+    for (t in 1:30) {
+        kf[year + t, z] <- kf[year + t - 1, z] + mu + sigma * rnorm(1)
+        for (x in 1:age) {
+            mf[x, year + t, z] <- exp(a[x] + b[x] * kf[year + t, z])
+        }
+    }
+}
+```
+```{r CBD Model, eval=FALSE}
+xbar <- mean(c(60:89))
+co <- c(60:89) - xbar
+k1 <- numeric()
+k2 <- numeric()
+for (t in 1:year) {
+    fit <- lm(log(q[1:age, t] / (1 - q[1:age, t])) ~ co)
+    k1[t] <- fit$coef[1]
+    k2[t] <- fit$coef[2]
+}
+```
+
+# Question 2
 
 ```{r one layer FNN Model}
 ```
