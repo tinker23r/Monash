@@ -10,8 +10,18 @@ output:
 library(tidyverse)
 library(knitr)
 library(fpp3)
+library(foreach)
+library(parallel)
+library(doParallel)
 set.seed(31455034)
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+# This is for parallelisation
+cl <- makeCluster(detectCores() - 2, outfile = "")
+cl
+
+registerDoParallel(cl)
+
 ```
 
 
@@ -43,7 +53,7 @@ data <- merge(death, exposure) %>%
 
 
 m <- matrix(
-    data = data$CRM, nrow = 100, ncol = 2015 - 1975 + 1, byrow = TRUE
+    data = data$CRM, nrow = 100, ncol = 2015 - 1975 + 1, byrow = FALSE
 ) %>% as_tibble()
 colnames(m) <- 1975:2015
 ```
@@ -78,9 +88,9 @@ k <- sum(pca$u) * pca$d[1] * pca$v
 
 ```{r Projecting LC Model}
 mu <- (k[year] - k[1]) / (year - 1)
-m <- cbind(m, array(NA, c(100, 35))) %>% as_tibble()
-colnames(m) <- 1975:2050
-for (t in 1:35) {
+m <- cbind(m, array(NA, c(100, 45))) %>% as_tibble()
+colnames(m) <- 1975:2060
+for (t in 1:45) {
     # K
     k[year + t] <- k[year + t - 1] + mu
     for (x in 1:age) {
@@ -95,35 +105,54 @@ cbind(0:99, a %>% as_tibble()) %>%
     as_tibble() %>%
     ggplot() +
     geom_line(aes(x = `0:99`, y = value)) +
-    labs(title = "a")
+    labs(title = "a", y = "a(x)", x = "age")
 
 cbind(0:99, b %>% as_tibble()) %>%
     as_tibble() %>%
     ggplot() +
     geom_line(aes(x = `0:99`, y = V1)) +
-    labs(title = "b")
+    labs(title = "b", y = "b(x)", x = "age")
 
 kvalues <- tsibble(
-    Year = 1975:2050,
+    Year = 1975:2060,
     K = k,
     index = Year
 )
-kvalues %>% autoplot() + labs()
+kvalues %>% autoplot()
 ```
 
 ```{r LC Model Simulation, eval=FALSE}
-simulation_size <- 1000
+# Cleanly inserts dataframe into a larger logical array
+tibble_insertion <- function(item, insertion_table, index) {
+    item_dim <- dim(item)
+    insertion_table_dim <- dim(insertion_table)
+    for (x in seq(item_dim[1])) {
+        for (t in seq(item_dim[2])) {
+            insertion_table[x, t, index] <- as.numeric(item[x, t])
+        }
+    }
+    return(insertion_table)
+}
+future <- 45
+simulation_size <- 2
 
 sigma <- sd(k[2:year] - k[1:(year - 1)])
-m_future <- array(NA, c(age, year + 35, simulation_size))
-k_future <- array(NA, c(year + 35, simulation_size))
+# sigma2 <- sd(k[2:year] - k[1:(year - 1)])
 
+m_future <- array(NA, c(age, year + future, simulation_size))
+k_future <- array(NA, c(year + future, simulation_size))
 
+k_future[1:year,] <- k[1:year]
+# k_future[1:year,] <- k[1:year]
+count <- 0
 for (z in 1:simulation_size) {
-    m_future[1:age, 1:year, z] <- m[1:age, 1:year]
-    k_future[1:year, z] <- k[1:year]
-    for (t in 1:35) {
-        
+    # if (z %% 10 == 0) print(z)
+
+    m_future <- tibble_insertion(m, m_future, z)
+    for (t in 1:45) {
+        count <- count + 1
+        print(count)
+        # print(t)
         # Random walk with drift
         k_future[year + t, z] <- k_future[year + t - 1, z] + mu + sigma * rnorm(1)
         for (x in 1:age) {
@@ -131,6 +160,139 @@ for (z in 1:simulation_size) {
         }
     }
 }
+# k_future %>% view()
+# m_future[1, , ] %>% view()
+# m_future[2, , ] %>% view()
+# m_future[3, , ] %>% view()
+# m_future[4, , ] %>% view()
+# m_future[80, , ] %>% view()
+
+# exp(
+#     a[1] + b[1] + (k_future[year + 1 - 1, 1] + mu + sigma * rnorm(1))
+# )
+# length(a)
+# length(b)
+# length(k_future)
+# length(m_future)
+```
+
+```{r}
+# Cleanly inserts dataframe into a larger logical array
+tibble_insertion <- function(item, insertion_table) {
+    item_dim <- dim(item)
+    insertion_table_dim <- dim(insertion_table)
+    for (x in seq(item_dim[1])) {
+        for (t in seq(item_dim[2])) {
+            insertion_table[x, t] <- as.numeric(item[x, t])
+        }
+    }
+    return(insertion_table)
+}
+
+simulation_size <- 10
+future <- 45
+
+sigma <- sd(k[2:year] - k[1:(year - 1)])
+m_future2 <- array(NA, c(age, year + future))
+k_future2 <- array(NA, c(year + future))
+
+# for (z in 1:simulation_size) {
+#     for (t in 1:45) {
+#         # Random walk with drift
+#         k_future[year + t, z] <- k_future[year + t - 1, z] + mu + sigma * rnorm(1)
+#     }
+# }
+
+
+k_future2 <- foreach(z = 1:simulation_size) %dopar% {
+    (function(k, kf, future, mu, sigma) {
+        kf <- tibble_insertion(k, kf)
+        for (t in 1:future) {
+            # Random walk with drift
+            kf[year + t] <- kf[year + t - 1] + mu + sigma * rnorm(1)
+        }
+        return(kf)
+    })(k, k_future2, future, mu, sigma)
+}
+
+# m_future2 <- foreach(z = 1:simulation_size) %dopar% {
+#     (function (m, k, mf, kf, future, mu, sigma, a, b, age, year) {
+#         mf <- tibble_insertion(m, mf)
+#         kf <- tibble_insertion(k, kf)
+#         for (t in 1:future) {
+#             # Random walk with drift
+#             kf[year + t] <- kf[year + t - 1] + mu + sigma * rnorm(1)
+#             for (x in 1:age) {
+#                 mf[x, year + t] <- exp(a[x] + b[x] * kf[year + t])
+#             }
+#         }
+#         return(mf)
+#     })(m, k, m_future2, k_future2, future, mu, sigma, a, b, age, year)
+# }
+typeof(m_future2[[1]][,])
+m_future2[[1]][, ]
+# m_future[1,,] %>% head()
+
+# k_future2 %>% view()
+# m_future2[2] %>% view()
+# m_future2[2, , ] %>% view()
+# m_future2[3, , ] %>% view()
+# m_future2[4, , ] %>% view()
+# m_future2[80, , ] %>% view()
+```
+
+
+```{r}
+# Cleanly inserts dataframe into a larger logical array
+tibble_insertion <- function(item, insertion_table, index) {
+    item_dim <- dim(item)
+    insertion_table_dim <- dim(insertion_table)
+    for (x in seq(item_dim[1])) {
+        for (t in seq(item_dim[2])) {
+            insertion_table[x, t, index] <- as.numeric(item[x, t])
+        }
+    }
+    return(insertion_table)
+}
+future <- 45
+simulation_size <- 2
+
+sigma <- sd(k[2:year] - k[1:(year - 1)])
+# sigma2 <- sd(k[2:year] - k[1:(year - 1)])
+
+m_future2 <- array(NA, c(age, year + future, simulation_size))
+k_future2 <- array(NA, c(year + future, simulation_size))
+
+k_future2[1:year, ] <- k[1:year]
+for (z in 1:simulation_size) {
+    for (t in 1:45) {
+        # Random walk with drift
+        k_future2[year + t, z] <- k_future2[year + t - 1, z] + mu + sigma * rnorm(1)
+    }
+}
+
+m_future2 <- foreach (z = 1:simulation_size) %dopar% {
+    m_future2 <- tibble_insertion(m, m_future2, z)
+    print(z)
+    # print(k_future2)
+    for (t in 1:45) {
+        for (x in 1:age) {
+            m_future2[x, year + t, z] <- exp(a[x] + b[x] * k_future2[year + t, z])
+        }
+    }
+    m_future2
+}
+m_future2[[1]] %>% head() %>% view()
+```
+
+```{r}
+f <- matrix(rnorm(9), 3, 3)
+foreach(i = 1:nrow(f)) %dopar% {
+    (f[i, ] / mean(f[i, ]))
+}
+
+m_future[1,,] %>% view()
+m_future2 %>% view()
 ```
 ```{r CBD Model, eval=FALSE}
 xbar <- mean(c(60:89))
@@ -146,5 +308,143 @@ for (t in 1:year) {
 
 # Question 2
 
+```{r Data Prep}
+# m %>% head()
+
+year <- 2015 - 1975 + 1
+x <- c(1:100) / 100
+mx <- max(log(m[, year]))
+mn <- min(log(m[, year]))
+t <- (log(m[, year]) - mn) / (mx - mn) * (0.9 - 0.1) + 0.1
+```
+
 ```{r one layer FNN Model}
+n <- 100
+hids <- 5
+epoch <- 100000
+y <- array(NA, c(hids, n))
+z <- numeric()
+
+logistic <- function(s) {
+    if (s > 700) {
+        logistic <- 1
+    }
+    if (s <= 700) {
+        logistic <- exp(s) / (1 + exp(s))
+    }
+    logistic
+}
+
+# Initialisation
+
+# Error Function
+e <- numeric()
+# a: parameters between input layer and hidden layer
+# a: uniform distribution (-1,1)
+a <- array(NA, c(2, hids))
+for (i in 1:2) {
+    for (j in 1:hids) {
+        a[i, j] <- runif(1, -1, 1)
+    }
+}
+# b: {-1, +1}
+b <- -1 + rbinom(hids + 1, 1, 0.5) * 2
+
+# tuning parameters
+# epsilon: learning rate
+epsilona <- array(0.5, c(2, hids))
+epsilonb <- rep(0.5, hids + 1)
+# lambda, phi, theta: update learning rate
+lambda <- 0.1
+phi <- 0.5
+theta <- 0.7
+
+# hidden nodes; fitted target value (output)
+for (k in 1:n) {
+    for (j in 1:hids) {
+        y[j, k] <- logistic(a[2, j] + a[1, j] * x[k])
+    }
+    z[k] <- logistic(b[hids + 1] + sum(b[1:hids] * y[1:hids, k]))
+}
+
+# estimation
+# epoch: number of iterations
+for (h in 1:epoch) {
+    # da, db: derivative
+    # activation function: logistic function
+    # f(s) = exp(s)/(1+exp(s))
+    da <- array(0, c(2, hids))
+    db <- rep(0, hids + 1)
+    # calculate derivatives with respect to a and b
+    for (k in 1:n) {
+        p <- (z[k] - t[k]) * z[k] * (1 - z[k]) / n
+        for (j in 1:hids) {
+            db[j] <- db[j] + p * y[j, k]
+        }
+        db[hids + 1] <- db[hids + 1] + p
+        for (j in 1:hids) {
+            q <- (z[k] - t[k]) * z[k] * (1 - z[k]) * b[j] * y[j, k] * (1 - y[j, k]) / n
+            da[1, j] <- da[1, j] + q * x[k]
+            da[2, j] <- da[2, j] + q
+        }
+    }
+    # update learning rate
+    if (h > 1) {
+        for (i in 1:2) {
+            for (j in 1:hids) {
+                if (ga[i, j] * da[i, j] > 0) {
+                    epsilona[i, j] <- epsilona[i, j] + lambda
+                }
+                if (ga[i, j] * da[i, j] <= 0) {
+                    epsilona[i, j] <- epsilona[i, j] * phi
+                }
+            }
+        }
+        for (j in 1:(hids + 1)) {
+            if (gb[j] * db[j] > 0) {
+                epsilonb[j] <- epsilonb[j] + lambda
+            }
+            if (gb[j] * db[j] <= 0) {
+                epsilonb[j] <- epsilonb[j] * phi
+            }
+        }
+    }
+    # update parameters a and b (gradient descent)
+    a <- a - epsilona * da
+    b <- b - epsilonb * db
+    # update accumulated information
+    if (h == 1) {
+        ga <- da
+        gb <- db
+    }
+    if (h > 1) {
+        ga <- theta * ga + (1 - theta) * da
+        gb <- theta * gb + (1 - theta) * db
+    }
+    # update values of hidden nodes and fitted target
+    for (k in 1:n) {
+        for (j in 1:hids) {
+            y[j, k] <- logistic(a[2, j] + a[1, j] * x[k])
+        }
+        z[k] <- logistic(b[hids + 1] + sum(b[1:hids] * y[1:hids, k]))
+    }
+    # calculate error function
+    e[h] <- 0.5 * sum((z - t)^2) / n
+
+    if (h %% 10000 == 0) {
+        print(paste0("Epoch: ", h))
+    }
+}
+
+plot(
+    c(0:99), (z - 0.1) / 0.8 * (mx - mn) + mn,
+    xlab = "age", ylab = "male log death rate 2018",
+    ylim = c(-10, -2), type = "l", lty = 3
+)
+
+lines(c(0:99), (t - 0.1) / 0.8 * (mx - mn) + mn)
+```
+
+```{r}
+stopCluster(cl)
 ```
