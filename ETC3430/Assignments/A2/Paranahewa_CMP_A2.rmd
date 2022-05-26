@@ -304,7 +304,7 @@ lines(c(2016:2060), log(lower), lty = 3, col = 2)
 
 # Question 2
 
-```{r Data Prep}
+```{r Data Prep, eval=FALSE}
 # m %>% head()
 
 year <- 2015 - 1975 + 1
@@ -314,7 +314,7 @@ mn <- min(log(m[, year]))
 t <- (log(m[, year]) - mn) / (mx - mn) * (0.9 - 0.1) + 0.1
 ```
 
-```{r one layer FNN Model}
+```{r one layer FNN Model, eval=FALSE}
 n <- 100
 hids <- 5
 epoch <- 100000
@@ -439,8 +439,4 @@ plot(
 )
 
 lines(c(0:99), (t - 0.1) / 0.8 * (mx - mn) + mn)
-```
-
-```{r}
-stopCluster(cl)
 ```
