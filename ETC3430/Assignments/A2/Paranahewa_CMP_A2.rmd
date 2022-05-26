@@ -15,7 +15,13 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ```
 
 
-```{r Data Preparation}
+LC is applied to ages 0 to 99.
+CBD is applied to ages 60 to 99.
+FNN is applied to ages 0 to 89.
+
+# Question 1
+
+```{r LC Model Data Preparation}
 # Limiting to Years 1975 - 2015 & Ages 0 - 99
 death <- read.delim(file = "Data/Deaths_1x1.txt", sep = "") %>%
     filter(1975 <= Year, Year <= 2015, Age != "110+") %>%
@@ -31,7 +37,7 @@ exposure <- read.delim(file = "Data/Exposures_1x1.txt", sep = "") %>%
     mutate(Age = strtoi(Age)) %>%
     filter(Age < 100)
 
-age <- max(death$Age) + 1
+age <- max(death$Age) - min(death$Age) + 1
 year <- 2015 - 1975 + 1
 
 # Death Array
@@ -40,7 +46,7 @@ d <- array(NA, c(age, year))
 # Exposure Array
 e <- array(NA, c(age, year))
 
-# Central Mortality Rate Array
+# Central Death Rate Array
 # m_(x, t) ≈ d_(x,t) / E_(x,t)
 m <- array(NA, c(age, year + 45))
 
@@ -57,11 +63,6 @@ for (t in 1:year) {
 }
 ```
 
-LC is applied to ages 0 to 99.
-CBD is applied to ages 60 to 99.
-FNN is applied to ages 0 to 89.
-
-# Question 1
 
 ```{r LC Model}
 # Overall mortality level
@@ -93,14 +94,14 @@ b <- pca$u / sum(pca$u)
 k <- sum(pca$u) * pca$d[1] * pca$v
 ```
 
-```{r plots, eval=FALSE}
+```{r LC Model Plots, eval=FALSE}
 plot(c(0:99), a, xlab = "age", ylab = "a(x)", xlim = c(0, 100), type = "l")
 plot(c(0:99), b, xlab = "age", ylab = "b(x)", xlim = c(0, 100), type = "l")
 plot(c(1975:2015), k[1:year], xlab = "year", ylab = "k(t)", xlim = c(1970, 2020), type = "l")
 ```
 
 ```{r Projecting LC Model}
-# Drift Term
+# Bivariate random walk with drift Term
 mu <- (k[year] - k[1]) / (year - 1)
 for (t in 1:45) {
     # Random Walk with Drift
@@ -115,7 +116,7 @@ for (t in 1:45) {
 ```{r LC Model Simulation}
 sigma <- sd(k[2:year] - k[1:(year - 1)])
 
-# Future Central Mortality Rate Array
+# Future Central Death Rate Array
 mf <- array(NA, c(age, year + 45, 1000))
 
 # Future Mortality index
@@ -158,17 +159,148 @@ lines(c(2016:2060), log(lower), lty = 3, col = 2)
 ```
 
 
-```{r CBD Model, eval=FALSE}
+```{r CBD Model Data Preparation}
+# Limiting to Years 1975 - 2015 & Ages 0 - 99
+death <- read.delim(file = "Data/Deaths_1x1.txt", sep = "") %>%
+    filter(1975 <= Year, Year <= 2015, Age != "110+") %>%
+    select(-Female, -Male) %>%
+    mutate(Age = strtoi(Age)) %>%
+    filter(Age >= 60, Age < 100)
+
+
+# Limiting to Years 1975 - 2015 & Ages 0 - 99
+exposure <- read.delim(file = "Data/Exposures_1x1.txt", sep = "") %>%
+    filter(1975 <= Year, Year <= 2015, Age != "110+") %>%
+    select(-Female, -Male) %>%
+    mutate(Age = strtoi(Age)) %>%
+    filter(Age >= 60, Age < 100)
+
+age <- max(death$Age) - min(death$Age) + 1
+year <- 2015 - 1975 + 1
+
+# Death Array
+d <- array(NA, c(age, year))
+
+# Exposure Array
+e <- array(NA, c(age, year))
+
+# Central Death Rate Array
+# m_(x, t) ≈ d_(x,t) / E_(x,t)
+m <- array(NA, c(age, year))
+
+# Mortality Rate Array
+q <- array(NA, c(age, year + 45))
+
+# Dataset age incrementer
+h <- 1
+
+for (t in 1:year) {
+    for (x in 1:age) {
+        d[x, t] <- death$Total[h]
+        e[x, t] <- exposure$Total[h]
+        m[x, t] <- d[x, t] / e[x, t]
+        q[x, t] <- 1 - exp(-(d[x, t] / e[x, t]))
+        h <- h + 1
+    }
+}
+```
+
+
+```{r CBD Model}
 xbar <- mean(c(60:99))
 co <- c(60:99) - xbar
+
+# Level of mortality curve
 kappa_1 <- numeric()
+
+# Gradient of mortality curve
 kappa_2 <- numeric()
+
 for (t in 1:year) {
     fit <- lm(log(q[1:age, t] / (1 - q[1:age, t])) ~ co)
     kappa_1[t] <- fit$coef[1]
     kappa_2[t] <- fit$coef[2]
 }
 ```
+
+```{r CBD Model Plots, eval=FALSE}
+plot(
+    c(1975:2015), kappa_1[1:year],
+    xlab = "year", ylab = "k1(t)", xlim = c(1975, 2020), type = "l",
+    main = "Kappa_1(t)"
+)
+plot(
+    c(1975:2015), kappa_2[1:year],
+    xlab = "year", ylab = "k2(t)", xlim = c(1975, 2020), type = "l",
+    main = "Kappa_2(t)"
+)
+```
+
+```{r Projecting CBD Model}
+# Bivaraite random walk with drift Term
+mu1 <- (kappa_1[year] - kappa_1[1]) / (year - 1)
+# Bivaraite random walk with drift Term
+mu2 <- (kappa_2[year] - kappa_2[1]) / (year - 1)
+
+for (t in 1:45) {
+    kappa_1[year + t] <- kappa_1[year + t - 1] + mu1
+    kappa_2[year + t] <- kappa_2[year + t - 1] + mu2
+    for (x in 1:age) {
+        temp <- exp(kappa_1[year + t] + kappa_2[year + t] * (x + 59 - xbar))
+        q[x, year + t] <- temp / (1 + temp)
+    }
+}
+```
+
+```{r CBD Model Simulation}
+sigma1 <- sd(kappa_1[2:year] - kappa_1[1:(year - 1)])
+sigma2 <- sd(kappa_2[2:year] - kappa_2[1:(year - 1)])
+sigma12 <- cor(kappa_1[2:year] - kappa_1[1:(year - 1)], kappa_2[2:year] - kappa_2[1:(year - 1)])
+
+# Future Mortality Rate Array
+qf <- array(NA, c(age, year + 45, 1000))
+
+# Future level of mortality curve
+k1f <- array(NA, c(year + 45, 1000))
+
+# Future gradient of mortality curve
+k2f <- array(NA, c(year + 45, 1000))
+
+for (z in 1:1000) {
+    qf[1:age, 1:year, z] <- q[1:age, 1:year]
+    k1f[1:year, z] <- kappa_1[1:year]
+    k2f[1:year, z] <- kappa_2[1:year]
+    for (t in 1:45) {
+        z1 <- rnorm(1)
+        z2 <- sigma12 * z1 + sqrt(1 - sigma12^2) * rnorm(1)
+        k1f[year + t, z] <- k1f[year + t - 1, z] + mu1 + sigma1 * z1
+        k2f[year + t, z] <- k2f[year + t - 1, z] + mu2 + sigma2 * z2
+        for (x in 1:age) {
+            temp <- exp(k1f[year + t, z] + k2f[year + t, z] * (x + 59 - xbar))
+            qf[x, year + t, z] <- temp / (1 + temp)
+        }
+    }
+}
+
+upper <- numeric()
+lower <- numeric()
+for (t in 1:45) {
+    upper[t] <- quantile(qf[1, year + t, 1:1000], 0.95)
+    lower[t] <- quantile(qf[1, year + t, 1:1000], 0.05)
+}
+
+
+plot(
+    c(1975:2015), log(q[1, 1:year]),
+    xlim = c(1975, 2060), type = "l", ylim = c(-7, -4),
+    xlab = "year", ylab = "log q(60,t)",
+    main = "Log of Mortality Rate for 60 Year-Olds"
+)
+lines(c(2016:2060), log(q[1, (year + 1):(year + 45)]), lty = 2, col = 2)
+lines(c(2016:2060), log(upper), lty = 3, col = 2)
+lines(c(2016:2060), log(lower), lty = 3, col = 2)
+```
+
 
 # Question 2
 
