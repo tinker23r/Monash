@@ -40,12 +40,12 @@ year <- 2015 - 1975 + 1
 x <- c(1:100) / 100
 mx <- max(log(m[, year]))
 mn <- min(log(m[, year]))
-t <- (log(m[, year]) - mn) / (mx - mn) * (0.9 - 0.1) + 0.1
+t_k <- (log(m[, year]) - mn) / (mx - mn) * (0.9 - 0.1) + 0.1
 
 
 n <- 100
 hids <- 5
-epoch <- 100000
+epoch <- 10000
 y <- array(NA, c(hids, n))
 z <- numeric()
 
@@ -65,12 +65,8 @@ logistic <- function(s) {
 e <- numeric()
 # a: parameters between input layer and hidden layer
 # a: uniform distribution (-1,1)
-a <- array(NA, c(2, hids))
-for (i in 1:2) {
-    for (j in 1:hids) {
-        a[i, j] <- runif(1, -1, 1)
-    }
-}
+a <- array(runif(2 * hids, -1, 1), c(2, hids))
+
 # b: {-1, +1}
 b <- -1 + rbinom(hids + 1, 1, 0.5) * 2
 
@@ -101,15 +97,15 @@ for (h in 1:epoch) {
     db <- rep(0, hids + 1)
     # calculate derivatives with respect to a and b
     for (k in 1:n) {
-        p <- (z[k] - t[k]) * z[k] * (1 - z[k]) / n
+        p <- (z[k] - t_k[k,]) * z[k] * (1 - z[k]) / n
         for (j in 1:hids) {
             db[j] <- db[j] + p * y[j, k]
         }
         db[hids + 1] <- db[hids + 1] + p
         for (j in 1:hids) {
-            q <- (z[k] - t[k]) * z[k] * (1 - z[k]) * b[j] * y[j, k] * (1 - y[j, k]) / n
-            da[1, j] <- da[1, j] + q[j, ] * x[k]
-            da[2, j] <- da[2, j] + q[j, ]
+            q <- (z[k] - t_k[k,]) * z[k] * (1 - z[k]) * b[j] * y[j, k] * (1 - y[j, k]) / n
+            da[1, j] <- da[1, j] + q * x[k]
+            da[2, j] <- da[2, j] + q
         }
     }
     # update learning rate
@@ -153,9 +149,9 @@ for (h in 1:epoch) {
         z[k] <- logistic(b[hids + 1] + sum(b[1:hids] * y[1:hids, k]))
     }
     # calculate error function
-    e[h] <- 0.5 * sum((z - t)^2) / n
+    e[h] <- 0.5 * sum((z - t_k)^2) / n
 
-    if (h %% 10000 == 0) {
+    if (h %% 100 == 0) {
         print(paste0("Epoch: ", h))
     }
 }
@@ -166,4 +162,4 @@ plot(
     ylim = c(-10, -2), type = "l", lty = 3
 )
 
-lines(c(0:99), (t - 0.1) / 0.8 * (mx - mn) + mn)
+lines(c(0:99), (t_k - 0.1) / 0.8 * (mx - mn) + mn)

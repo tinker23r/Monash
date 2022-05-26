@@ -7,55 +7,55 @@ output:
 ---
 
 ```{r Setup, echo=FALSE, warning=FALSE, message=FALSE}
+rm(list = ls())
 library(tidyverse)
 library(knitr)
 library(fpp3)
-library(foreach)
-library(parallel)
-library(doParallel)
 set.seed(31455034)
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
-
-# This is for parallelisation
-cl <- makeCluster(detectCores() - 2, outfile = "")
-cl
-
-registerDoParallel(cl)
-
 ```
 
 
 ```{r Data Preparation}
 # Limiting to Years 1975 - 2015 & Ages 0 - 99
 death <- read.delim(file = "Data/Deaths_1x1.txt", sep = "") %>%
-    as_tibble() %>%
     filter(1975 <= Year, Year <= 2015, Age != "110+") %>%
     select(-Female, -Male) %>%
     mutate(Age = strtoi(Age)) %>%
-    filter(Age < 100) %>%
-    rename(deaths = Total)
+    filter(Age < 100)
 
 
 # Limiting to Years 1975 - 2015 & Ages 0 - 99
 exposure <- read.delim(file = "Data/Exposures_1x1.txt", sep = "") %>%
-    as_tibble() %>%
     filter(1975 <= Year, Year <= 2015, Age != "110+") %>%
     select(-Female, -Male) %>%
     mutate(Age = strtoi(Age)) %>%
-    filter(Age < 100) %>%
-    rename(exposures = Total)
+    filter(Age < 100)
 
+age <- max(death$Age) + 1
+year <- 2015 - 1975 + 1
 
-data <- merge(death, exposure) %>%
-    as_tibble() %>%
-    arrange(Year, Age) %>%
-    mutate(CRM = deaths / exposures)
+# Death Array
+d <- array(NA, c(age, year))
 
+# Exposure Array
+e <- array(NA, c(age, year))
 
-m <- matrix(
-    data = data$CRM, nrow = 100, ncol = 2015 - 1975 + 1, byrow = FALSE
-) %>% as_tibble()
-colnames(m) <- 1975:2015
+# Central Mortality Rate Array
+# m_(x, t) ≈ d_(x,t) / E_(x,t)
+m <- array(NA, c(age, year + 45))
+
+# Dataset age incrementer
+h <- 1
+
+for (t in 1:year) {
+    for (x in 1:age) {
+        d[x, t] <- death$Total[h]
+        e[x, t] <- exposure$Total[h]
+        m[x, t] <- d[x, t] / e[x, t]
+        h <- h + 1
+    }
+}
 ```
 
 LC is applied to ages 0 to 99.
@@ -65,235 +65,99 @@ FNN is applied to ages 0 to 89.
 # Question 1
 
 ```{r LC Model}
-# Given Data limit
-age <- 100
-year <- 2015 - 1975 + 1
-
+# Overall mortality level
 a <- numeric()
+
 for (x in 1:age) {
-    a[x] <- mean(log(as.numeric(m[x, ])))
+    a[x] <- mean(log(m[x, 1:year]))
 }
 
 info <- array(NA, c(age, year))
+
+# Demeaned mortality data
 for (x in 1:age) {
     for (t in 1:year) {
-        info[x, t] <- log(as.numeric(m[x, t])) - a[x]
+        info[x, t] <- log(m[x, t]) - a[x]
     }
 }
 
 pca <- svd(info, 1, 1)
+# X = UDV'
+# U: orthogonal matrix
+# V: orthogonal matrix
+# D: diagonal matrix
+
+# Age-specific sensitivity of log death
 b <- pca$u / sum(pca$u)
+
+# Mortality index
 k <- sum(pca$u) * pca$d[1] * pca$v
 ```
 
+```{r plots, eval=FALSE}
+plot(c(0:99), a, xlab = "age", ylab = "a(x)", xlim = c(0, 100), type = "l")
+plot(c(0:99), b, xlab = "age", ylab = "b(x)", xlim = c(0, 100), type = "l")
+plot(c(1975:2015), k[1:year], xlab = "year", ylab = "k(t)", xlim = c(1970, 2020), type = "l")
+```
+
 ```{r Projecting LC Model}
+# Drift Term
 mu <- (k[year] - k[1]) / (year - 1)
-m <- cbind(m, array(NA, c(100, 45))) %>% as_tibble()
-colnames(m) <- 1975:2060
-for (t in 1:45) {
-    # K
+for (t in 1:32) {
+    # Random Walk with Drift
     k[year + t] <- k[year + t - 1] + mu
     for (x in 1:age) {
-        # mx,t = ax + bx*kt
         m[x, year + t] <- exp(a[x] + b[x] * k[year + t])
     }
 }
 ```
 
-```{r plots}
-cbind(0:99, a %>% as_tibble()) %>%
-    as_tibble() %>%
-    ggplot() +
-    geom_line(aes(x = `0:99`, y = value)) +
-    labs(title = "a", y = "a(x)", x = "age")
-
-cbind(0:99, b %>% as_tibble()) %>%
-    as_tibble() %>%
-    ggplot() +
-    geom_line(aes(x = `0:99`, y = V1)) +
-    labs(title = "b", y = "b(x)", x = "age")
-
-kvalues <- tsibble(
-    Year = 1975:2060,
-    K = k,
-    index = Year
-)
-kvalues %>% autoplot()
-```
 
 ```{r LC Model Simulation, eval=FALSE}
-# Cleanly inserts dataframe into a larger logical array
-tibble_insertion <- function(item, insertion_table, index) {
-    item_dim <- dim(item)
-    insertion_table_dim <- dim(insertion_table)
-    for (x in seq(item_dim[1])) {
-        for (t in seq(item_dim[2])) {
-            insertion_table[x, t, index] <- as.numeric(item[x, t])
-        }
-    }
-    return(insertion_table)
-}
-future <- 45
-simulation_size <- 2
-
 sigma <- sd(k[2:year] - k[1:(year - 1)])
-# sigma2 <- sd(k[2:year] - k[1:(year - 1)])
 
-m_future <- array(NA, c(age, year + future, simulation_size))
-k_future <- array(NA, c(year + future, simulation_size))
+# Future Central Mortality Rate Array
+mf <- array(NA, c(age, year + 45, 1000))
 
-k_future[1:year,] <- k[1:year]
-# k_future[1:year,] <- k[1:year]
-count <- 0
-for (z in 1:simulation_size) {
-    # if (z %% 10 == 0) print(z)
-
-    m_future <- tibble_insertion(m, m_future, z)
+# Future Mortality index
+kf <- array(NA, c(year + 45, 1000))
+# 1000 simulations
+# rnorm(1): simulated error with mean 0 and variance 1
+# sigma*rnorm(1)
+for (z in 1:1000) {
+    mf[1:age, 1:year, z] <- m[1:age, 1:year]
+    kf[1:year, z] <- k[1:year]
     for (t in 1:45) {
-        count <- count + 1
-        print(count)
-        # print(t)
-        # Random walk with drift
-        k_future[year + t, z] <- k_future[year + t - 1, z] + mu + sigma * rnorm(1)
+        # Random Walk with Drift and noise added
+        kf[year + t, z] <- kf[year + t - 1, z] + mu + sigma * rnorm(1)
         for (x in 1:age) {
-            m_future[x, year + t, z] <- exp(a[x] + b[x] * k_future[year + t, z])
+            mf[x, year + t, z] <- exp(a[x] + b[x] * kf[year + t, z])
         }
     }
 }
-# k_future %>% view()
-# m_future[1, , ] %>% view()
-# m_future[2, , ] %>% view()
-# m_future[3, , ] %>% view()
-# m_future[4, , ] %>% view()
-# m_future[80, , ] %>% view()
 
-# exp(
-#     a[1] + b[1] + (k_future[year + 1 - 1, 1] + mu + sigma * rnorm(1))
-# )
-# length(a)
-# length(b)
-# length(k_future)
-# length(m_future)
-```
+# 95% preidciton interval
 
-```{r}
-# Cleanly inserts dataframe into a larger logical array
-tibble_insertion <- function(item, insertion_table) {
-    item_dim <- dim(item)
-    insertion_table_dim <- dim(insertion_table)
-    for (x in seq(item_dim[1])) {
-        for (t in seq(item_dim[2])) {
-            insertion_table[x, t] <- as.numeric(item[x, t])
-        }
-    }
-    return(insertion_table)
+# 97.5% quantile: upper end
+upper <- numeric()
+# 2.5% quantile: lower end
+lower <- numeric()
+for (t in 1:45) {
+    upper[t] <- quantile(mf[60, year + t, 1:1000], 0.975)
+    lower[t] <- quantile(mf[60, year + t, 1:1000], 0.025)
 }
 
-simulation_size <- 10
-future <- 45
-
-sigma <- sd(k[2:year] - k[1:(year - 1)])
-m_future2 <- array(NA, c(age, year + future))
-k_future2 <- array(NA, c(year + future))
-
-# for (z in 1:simulation_size) {
-#     for (t in 1:45) {
-#         # Random walk with drift
-#         k_future[year + t, z] <- k_future[year + t - 1, z] + mu + sigma * rnorm(1)
-#     }
-# }
-
-
-k_future2 <- foreach(z = 1:simulation_size) %dopar% {
-    (function(k, kf, future, mu, sigma) {
-        kf <- tibble_insertion(k, kf)
-        for (t in 1:future) {
-            # Random walk with drift
-            kf[year + t] <- kf[year + t - 1] + mu + sigma * rnorm(1)
-        }
-        return(kf)
-    })(k, k_future2, future, mu, sigma)
-}
-
-# m_future2 <- foreach(z = 1:simulation_size) %dopar% {
-#     (function (m, k, mf, kf, future, mu, sigma, a, b, age, year) {
-#         mf <- tibble_insertion(m, mf)
-#         kf <- tibble_insertion(k, kf)
-#         for (t in 1:future) {
-#             # Random walk with drift
-#             kf[year + t] <- kf[year + t - 1] + mu + sigma * rnorm(1)
-#             for (x in 1:age) {
-#                 mf[x, year + t] <- exp(a[x] + b[x] * kf[year + t])
-#             }
-#         }
-#         return(mf)
-#     })(m, k, m_future2, k_future2, future, mu, sigma, a, b, age, year)
-# }
-typeof(m_future2[[1]][,])
-m_future2[[1]][, ]
-# m_future[1,,] %>% head()
-
-# k_future2 %>% view()
-# m_future2[2] %>% view()
-# m_future2[2, , ] %>% view()
-# m_future2[3, , ] %>% view()
-# m_future2[4, , ] %>% view()
-# m_future2[80, , ] %>% view()
+plot(
+    c(1975:2015), log(m[60, 1:year]),
+    xlab = "year", ylab = "log m(60,t)", 
+    xlim = c(1975, 2060), type = "l", ylim = c(-7, -4)
+)
+lines(c(2016:2060), log(m[60, (year + 1):(year + 45)]), lty = 2, col = 2)
+lines(c(2016:2060), log(upper), lty = 3, col = 2)
+lines(c(2016:2060), log(lower), lty = 3, col = 2)
 ```
 
 
-```{r}
-# Cleanly inserts dataframe into a larger logical array
-tibble_insertion <- function(item, insertion_table, index) {
-    item_dim <- dim(item)
-    insertion_table_dim <- dim(insertion_table)
-    for (x in seq(item_dim[1])) {
-        for (t in seq(item_dim[2])) {
-            insertion_table[x, t, index] <- as.numeric(item[x, t])
-        }
-    }
-    return(insertion_table)
-}
-future <- 45
-simulation_size <- 2
-
-sigma <- sd(k[2:year] - k[1:(year - 1)])
-# sigma2 <- sd(k[2:year] - k[1:(year - 1)])
-
-m_future2 <- array(NA, c(age, year + future, simulation_size))
-k_future2 <- array(NA, c(year + future, simulation_size))
-
-k_future2[1:year, ] <- k[1:year]
-for (z in 1:simulation_size) {
-    for (t in 1:45) {
-        # Random walk with drift
-        k_future2[year + t, z] <- k_future2[year + t - 1, z] + mu + sigma * rnorm(1)
-    }
-}
-
-m_future2 <- foreach (z = 1:simulation_size) %dopar% {
-    m_future2 <- tibble_insertion(m, m_future2, z)
-    print(z)
-    # print(k_future2)
-    for (t in 1:45) {
-        for (x in 1:age) {
-            m_future2[x, year + t, z] <- exp(a[x] + b[x] * k_future2[year + t, z])
-        }
-    }
-    m_future2
-}
-m_future2[[1]] %>% head() %>% view()
-```
-
-```{r}
-f <- matrix(rnorm(9), 3, 3)
-foreach(i = 1:nrow(f)) %dopar% {
-    (f[i, ] / mean(f[i, ]))
-}
-
-m_future[1,,] %>% view()
-m_future2 %>% view()
-```
 ```{r CBD Model, eval=FALSE}
 xbar <- mean(c(60:89))
 co <- c(60:89) - xbar
@@ -384,8 +248,8 @@ for (h in 1:epoch) {
         db[hids + 1] <- db[hids + 1] + p
         for (j in 1:hids) {
             q <- (z[k] - t[k]) * z[k] * (1 - z[k]) * b[j] * y[j, k] * (1 - y[j, k]) / n
-            da[1, j] <- da[1, j] + q * x[k]
-            da[2, j] <- da[2, j] + q
+            da[1, j] <- da[1, j] + q[j, ] * x[k]
+            da[2, j] <- da[2, j] + q[j, ]
         }
     }
     # update learning rate

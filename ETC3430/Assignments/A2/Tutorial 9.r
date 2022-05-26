@@ -1,14 +1,23 @@
-# rm(list = ls())
+rm(list = ls())
 ### 9.1 ###
-death <- read.delim(file = "Data/Deaths_1x1.txt", sep = "")
-exposure <- read.delim(file = "Data/Exposures_1x1.txt", sep = "")
+death <- read.delim(file = "Data/Deaths_1x1.txt", sep = "") %>%
+    filter(1975 <= Year, Year <= 2015, Age != "110+") %>%
+    select(-Female, -Male) %>%
+    mutate(Age = strtoi(Age)) %>%
+    filter(Age < 100)
+
+exposure <- read.delim(file = "Data/Exposures_1x1.txt", sep = "") %>%
+    filter(1975 <= Year, Year <= 2015, Age != "110+") %>%
+    select(-Female, -Male) %>%
+    mutate(Age = strtoi(Age)) %>%
+    filter(Age < 100)
 
 age <- 100
 year <- 2015 - 1975 + 1
 d <- array(NA, c(age, year))
 e <- array(NA, c(age, year))
 m <- array(NA, c(age, year + 45))
-death$Total %>% head()
+# death$Total %>% head()
 h <- 1
 for (t in 1:year) {
     for (x in 1:age) {
@@ -17,7 +26,7 @@ for (t in 1:year) {
         m[x, t] <- d[x, t] / e[x, t]
         h <- h + 1
     }
-    h <- h + 11
+    # h <- h + 11
 }
 
 # a
@@ -47,9 +56,9 @@ b <- pca$u / sum(pca$u)
 k <- sum(pca$u) * pca$d[1] * pca$v
 
 # b
-plot(c(0:89), a, xlab = "age", ylab = "a(x)", xlim = c(0, 90), type = "l")
-plot(c(0:89), b, xlab = "age", ylab = "b(x)", xlim = c(0, 90), type = "l")
-plot(c(1970:2018), k[1:year], xlab = "year", ylab = "k(t)", xlim = c(1970, 2020), type = "l")
+plot(c(0:99), a, xlab = "age", ylab = "a(x)", xlim = c(0, 100), type = "l")
+plot(c(0:99), b, xlab = "age", ylab = "b(x)", xlim = c(0, 100), type = "l")
+plot(c(1975:2015), k[1:year], xlab = "year", ylab = "k(t)", xlim = c(1970, 2020), type = "l")
 
 # c
 # point forecast
@@ -115,100 +124,100 @@ lines(c(2019:2050), log(m[66, (year + 1):(year + 32)]), lty = 2, col = 2)
 lines(c(2019:2050), log(upper), lty = 3, col = 2)
 lines(c(2019:2050), log(lower), lty = 3, col = 2)
 
-rm(list = ls())
-### 9.2 ###
-raw <- read.table("Australia Data.txt", header = TRUE)
-age <- 30
-year <- 49
-d <- array(NA, c(age, year))
-e <- array(NA, c(age, year))
-m <- array(NA, c(age, year))
-q <- array(NA, c(age, year + 32))
-h <- 61
-for (t in 1:year) {
-    for (x in 1:age) {
-        d[x, t] <- raw$dxMale[h]
-        e[x, t] <- raw$exMale[h]
-        m[x, t] <- d[x, t] / e[x, t]
-        q[x, t] <- 1 - exp(-m[x, t])
-        h <- h + 1
-    }
-    h <- h + 81
-}
+# rm(list = ls())
+# ### 9.2 ###
+# raw <- read.table("Australia Data.txt", header = TRUE)
+# age <- 30
+# year <- 49
+# d <- array(NA, c(age, year))
+# e <- array(NA, c(age, year))
+# m <- array(NA, c(age, year))
+# q <- array(NA, c(age, year + 32))
+# h <- 61
+# for (t in 1:year) {
+#     for (x in 1:age) {
+#         d[x, t] <- raw$dxMale[h]
+#         e[x, t] <- raw$exMale[h]
+#         m[x, t] <- d[x, t] / e[x, t]
+#         q[x, t] <- 1 - exp(-m[x, t])
+#         h <- h + 1
+#     }
+#     h <- h + 81
+# }
 
-# a
-xbar <- mean(c(60:89))
-co <- c(60:89) - xbar
-k1 <- numeric()
-k2 <- numeric()
-for (t in 1:year) {
-    fit <- lm(log(q[1:age, t] / (1 - q[1:age, t])) ~ co)
-    k1[t] <- fit$coef[1]
-    k2[t] <- fit$coef[2]
-}
+# # a
+# xbar <- mean(c(60:89))
+# co <- c(60:89) - xbar
+# k1 <- numeric()
+# k2 <- numeric()
+# for (t in 1:year) {
+#     fit <- lm(log(q[1:age, t] / (1 - q[1:age, t])) ~ co)
+#     k1[t] <- fit$coef[1]
+#     k2[t] <- fit$coef[2]
+# }
 
-# b
-# logit(q[x,t]) = k1[t] + k2[t](x-xbar) + error[x,t]
-plot(c(1970:2018), k1[1:year], xlab = "year", ylab = "k1(t)", xlim = c(1970, 2020), type = "l")
-plot(c(1970:2018), k2[1:year], xlab = "year", ylab = "k2(t)", xlim = c(1970, 2020), type = "l")
+# # b
+# # logit(q[x,t]) = k1[t] + k2[t](x-xbar) + error[x,t]
+# plot(c(1970:2018), k1[1:year], xlab = "year", ylab = "k1(t)", xlim = c(1970, 2020), type = "l")
+# plot(c(1970:2018), k2[1:year], xlab = "year", ylab = "k2(t)", xlim = c(1970, 2020), type = "l")
 
-# c
-# bivaraite random walk with drift
-# k1[t] = mu1 + k1[t-1] + e1[t]
-# k2[t] = mu2 + k2[t-1] + e2[t]
-# cov(e1[t], e2[t]) exists
-mu1 <- (k1[year] - k1[1]) / (year - 1)
-mu2 <- (k2[year] - k2[1]) / (year - 1)
+# # c
+# # bivaraite random walk with drift
+# # k1[t] = mu1 + k1[t-1] + e1[t]
+# # k2[t] = mu2 + k2[t-1] + e2[t]
+# # cov(e1[t], e2[t]) exists
+# mu1 <- (k1[year] - k1[1]) / (year - 1)
+# mu2 <- (k2[year] - k2[1]) / (year - 1)
 
-# point forecast
-# y = logit(q[x,t]) = log(q[x,t]/(1-q[x,t]))
-# q[x,t] = exp(y)/(1+exp(y))
-for (t in 1:32) {
-    k1[year + t] <- k1[year + t - 1] + mu1
-    k2[year + t] <- k2[year + t - 1] + mu2
-    for (x in 1:age) {
-        temp <- exp(k1[year + t] + k2[year + t] * (x + 59 - xbar))
-        q[x, year + t] <- temp / (1 + temp)
-    }
-}
+# # point forecast
+# # y = logit(q[x,t]) = log(q[x,t]/(1-q[x,t]))
+# # q[x,t] = exp(y)/(1+exp(y))
+# for (t in 1:32) {
+#     k1[year + t] <- k1[year + t - 1] + mu1
+#     k2[year + t] <- k2[year + t - 1] + mu2
+#     for (x in 1:age) {
+#         temp <- exp(k1[year + t] + k2[year + t] * (x + 59 - xbar))
+#         q[x, year + t] <- temp / (1 + temp)
+#     }
+# }
 
-# prediction interval
-# k1[t] - k1[t-1] - mu1 = e1[t]
-# k2[t] - k2[t-1] - mu2 = e2[t]
-# cov(e1[t],e2[t]) = cov(k1[t] - k1[t-1] - mu1, k2[t] - k2[t-1] - mu2) = cov(k1[t] - k1[t-1], k2[t] - k2[t-1])
-# corr(e1[t],e2[t]) = corr(k1[t] - k1[t-1], k2[t] - k2[t-1])
-sigma1 <- sd(k1[2:year] - k1[1:(year - 1)])
-sigma2 <- sd(k2[2:year] - k2[1:(year - 1)])
-sigma12 <- cor(k1[2:year] - k1[1:(year - 1)], k2[2:year] - k2[1:(year - 1)])
+# # prediction interval
+# # k1[t] - k1[t-1] - mu1 = e1[t]
+# # k2[t] - k2[t-1] - mu2 = e2[t]
+# # cov(e1[t],e2[t]) = cov(k1[t] - k1[t-1] - mu1, k2[t] - k2[t-1] - mu2) = cov(k1[t] - k1[t-1], k2[t] - k2[t-1])
+# # corr(e1[t],e2[t]) = corr(k1[t] - k1[t-1], k2[t] - k2[t-1])
+# sigma1 <- sd(k1[2:year] - k1[1:(year - 1)])
+# sigma2 <- sd(k2[2:year] - k2[1:(year - 1)])
+# sigma12 <- cor(k1[2:year] - k1[1:(year - 1)], k2[2:year] - k2[1:(year - 1)])
 
-qf <- array(NA, c(age, year + 32, 1000))
-k1f <- array(NA, c(year + 32, 1000))
-k2f <- array(NA, c(year + 32, 1000))
-for (z in 1:1000) {
-    qf[1:age, 1:year, z] <- q[1:age, 1:year]
-    k1f[1:year, z] <- k1[1:year]
-    k2f[1:year, z] <- k2[1:year]
-    for (t in 1:32) {
-        z1 <- rnorm(1)
-        z2 <- sigma12 * z1 + sqrt(1 - sigma12^2) * rnorm(1)
-        k1f[year + t, z] <- k1f[year + t - 1, z] + mu1 + sigma1 * z1
-        k2f[year + t, z] <- k2f[year + t - 1, z] + mu2 + sigma2 * z2
-        for (x in 1:age) {
-            temp <- exp(k1f[year + t, z] + k2f[year + t, z] * (x + 59 - xbar))
-            qf[x, year + t, z] <- temp / (1 + temp)
-        }
-    }
-}
+# qf <- array(NA, c(age, year + 32, 1000))
+# k1f <- array(NA, c(year + 32, 1000))
+# k2f <- array(NA, c(year + 32, 1000))
+# for (z in 1:1000) {
+#     qf[1:age, 1:year, z] <- q[1:age, 1:year]
+#     k1f[1:year, z] <- k1[1:year]
+#     k2f[1:year, z] <- k2[1:year]
+#     for (t in 1:32) {
+#         z1 <- rnorm(1)
+#         z2 <- sigma12 * z1 + sqrt(1 - sigma12^2) * rnorm(1)
+#         k1f[year + t, z] <- k1f[year + t - 1, z] + mu1 + sigma1 * z1
+#         k2f[year + t, z] <- k2f[year + t - 1, z] + mu2 + sigma2 * z2
+#         for (x in 1:age) {
+#             temp <- exp(k1f[year + t, z] + k2f[year + t, z] * (x + 59 - xbar))
+#             qf[x, year + t, z] <- temp / (1 + temp)
+#         }
+#     }
+# }
 
-upper <- numeric()
-lower <- numeric()
-for (t in 1:32) {
-    upper[t] <- quantile(qf[6, year + t, 1:1000], 0.95)
-    lower[t] <- quantile(qf[6, year + t, 1:1000], 0.05)
-}
+# upper <- numeric()
+# lower <- numeric()
+# for (t in 1:32) {
+#     upper[t] <- quantile(qf[6, year + t, 1:1000], 0.95)
+#     lower[t] <- quantile(qf[6, year + t, 1:1000], 0.05)
+# }
 
-# d
-plot(c(1970:2018), log(q[6, 1:year]), xlab = "year", ylab = "log q(65,t)", xlim = c(1970, 2050), type = "l", ylim = c(-6.5, -3))
-lines(c(2019:2050), log(q[6, (year + 1):(year + 32)]), lty = 2, col = 2)
-lines(c(2019:2050), log(upper), lty = 3, col = 2)
-lines(c(2019:2050), log(lower), lty = 3, col = 2)
+# # d
+# plot(c(1970:2018), log(q[6, 1:year]), xlab = "year", ylab = "log q(65,t)", xlim = c(1970, 2050), type = "l", ylim = c(-6.5, -3))
+# lines(c(2019:2050), log(q[6, (year + 1):(year + 32)]), lty = 2, col = 2)
+# lines(c(2019:2050), log(upper), lty = 3, col = 2)
+# lines(c(2019:2050), log(lower), lty = 3, col = 2)
