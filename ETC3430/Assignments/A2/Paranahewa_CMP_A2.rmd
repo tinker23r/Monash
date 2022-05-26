@@ -8,9 +8,8 @@ output:
 
 ```{r Setup, echo=FALSE, warning=FALSE, message=FALSE}
 rm(list = ls())
-library(tidyverse)
 library(knitr)
-library(fpp3)
+library(tidyverse)
 set.seed(31455034)
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ```
@@ -103,7 +102,7 @@ plot(c(1975:2015), k[1:year], xlab = "year", ylab = "k(t)", xlim = c(1970, 2020)
 ```{r Projecting LC Model}
 # Drift Term
 mu <- (k[year] - k[1]) / (year - 1)
-for (t in 1:32) {
+for (t in 1:45) {
     # Random Walk with Drift
     k[year + t] <- k[year + t - 1] + mu
     for (x in 1:age) {
@@ -113,7 +112,7 @@ for (t in 1:32) {
 ```
 
 
-```{r LC Model Simulation, eval=FALSE}
+```{r LC Model Simulation}
 sigma <- sd(k[2:year] - k[1:(year - 1)])
 
 # Future Central Mortality Rate Array
@@ -149,8 +148,9 @@ for (t in 1:45) {
 
 plot(
     c(1975:2015), log(m[60, 1:year]),
-    xlab = "year", ylab = "log m(60,t)", 
-    xlim = c(1975, 2060), type = "l", ylim = c(-7, -4)
+    xlim = c(1975, 2060), type = "l", ylim = c(-7, -4),
+    xlab = "year", ylab = "log m(60,t)",
+    main = "Log of Central Mortality Rate for 60 Year-Olds"
 )
 lines(c(2016:2060), log(m[60, (year + 1):(year + 45)]), lty = 2, col = 2)
 lines(c(2016:2060), log(upper), lty = 3, col = 2)
@@ -159,14 +159,14 @@ lines(c(2016:2060), log(lower), lty = 3, col = 2)
 
 
 ```{r CBD Model, eval=FALSE}
-xbar <- mean(c(60:89))
-co <- c(60:89) - xbar
-k1 <- numeric()
-k2 <- numeric()
+xbar <- mean(c(60:99))
+co <- c(60:99) - xbar
+kappa_1 <- numeric()
+kappa_2 <- numeric()
 for (t in 1:year) {
     fit <- lm(log(q[1:age, t] / (1 - q[1:age, t])) ~ co)
-    k1[t] <- fit$coef[1]
-    k2[t] <- fit$coef[2]
+    kappa_1[t] <- fit$coef[1]
+    kappa_2[t] <- fit$coef[2]
 }
 ```
 
