@@ -5,6 +5,8 @@ output:
   pdf_document:
     fig_crop: false
 ---
+    
+<!-- For the datasets make sure to remove the watermark at the top of the files -->
 
 ```{r Setup, echo=FALSE, warning=FALSE, message=FALSE}
 rm(list = ls())
@@ -13,6 +15,7 @@ library(tidyverse)
 set.seed(31455034)
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ```
+
 
 
 # Question 1
@@ -156,6 +159,18 @@ lines(c(2016:2060), log(upper), lty = 3, col = 2)
 lines(c(2016:2060), log(lower), lty = 3, col = 2)
 ```
 
+
+```{r LC Cohort Life Expectancy}
+LC_Cohort_Life_Expectancy <- exp(-m[60, year])
+
+for (t in 1:(99 - 60)) {
+    LC_Cohort_Life_Expectancy <- LC_Cohort_Life_Expectancy * exp(-m[60 + t, year + t])
+    if (LC_Cohort_Life_Expectancy >= 0.5) lce_age <- 60 + t
+}
+# LC_Cohort_Life_Expectancy
+```
+
+According to the LC Model, the Cohort Life Expectancy of a 60 year old in 2016 living to the age of 99 is `r lce_age`
 
 ```{r CBD Model Data Preparation}
 # Limiting to Years 1975 - 2015 & Ages 0 - 99
@@ -302,6 +317,29 @@ lines(c(2016:2060), log(upper), lty = 3, col = 2)
 lines(c(2016:2060), log(lower), lty = 3, col = 2)
 ```
 
+
+```{r CBD Cohort Life Expectancy}
+# CBD_Cohort_Life_Expectancy <- array(60, 1:(99 - 60))
+CBD_P <- (1 - q[1, year])
+
+for (t in 1:(99 - 60)) {
+    CBD_P <- CBD_P * (1 - q[1 + t, year + t])
+    # CBD_Cohort_Life_Expectancy[t + 1] <- 
+    if (CBD_P >= 0.5) cbde_age <- 60 + t
+}
+
+```
+
+According to the CBD Model, the Cohort Life Expectancy of a 60 year old in 2016 living to the age of 99 is `r cbde_age`
+
+
+### Comparing LC and CBD Model
+
+The LC model and CBD model appear to reveal the same log(mortality rate) although the CBD model overestimates the rate when it is closer to 2015.
+
+For the futures, the LC model has a linear trend downwards with drop in log(mortality rate) by approximately 1. The CBD model's predictions on the other hand, are lower than the LC model by a small amount (0.2). 
+
+The prediction intervals for the two model differ by considerabl amount. The CBD model's prediction interval remains relatively close to the point forecast, while the LC model's prediction interval grows to a sizeable amount compared to the CBD model.  
 
 # Question 2
 
