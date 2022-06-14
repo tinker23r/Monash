@@ -1,0 +1,138 @@
+2a
+I agree because this observation is an outlier,
+because it is around five standard deviations from the sample mean.
+This is an unusual observation because it is unlikely
+that someone can survive less than 2 hours sleep per night.
+
+2b
+- H0: bkid=0
+- H1: bkid ~= 0
+- t=bkidhat/se(bkidhat)=-144.54/88.12
+- under H0 t is t(n-k-1) distributed
+- t=-144.54/88.12=-1.640
+- critical value: t(305-5-1) approx 1.658
+- absolute value of the test statistic is smaller than 1.658,
+so cannot reject H0: that having a child under the age of 5 has
+no effect on a mother's sleep.
+
+2c
+coef educ=-12.5 and se coef=9
+t(305-5-1)=t(299) approx 1.98
+
+- 95% confidence interval beduc
+- -12.5-1.98*9=-30.32 and -12.5+1.98*9=5.32
+- 95% confidence interval for a change of one year in education
+- 95% confidence interval for 4*beduc
+-[-121.28,21.28]
+
+2d
+first derivative of -43*AGE+0.5*AGE2:
+-43+0.5*2*AGE
+the predicted sleep is at its minimum when -43+0.5*2*AGE=0,
+that is AGE=43
+
+2e
+- H0: bedu=bkid=0
+- H1: at least one of these coefs is not equal to zero
+- F = ((Rur2-Rr2)/q)/((1-Rur2)/(n-k-1))
+- distribution F under H0: F(q,n-k-1)
+- Fcalc = ((0.104-0.092)/2)/((1-0.104)/(305-5-1))=2.00
+- Fcrit = F(2,299) approx 3.07
+- Fcalc is smaller than Fcrit, so we cannot reject H0
+- After controlling for work and age, 
+education and kids have no additional explanatory power
+for predicting sleep for women.
+
+2f
+- H0: bYHAT=bYHAT2=0
+- Ha: at least one of the coefs is not equal to zero
+- W = n*R2
+- asymptotic distribution under H0: Chi2(q)
+- Wcalc = 305*0.001=0.305
+- Wcrit = Chi2(2)=5.99
+- Wcalc is smaller than Wcrit, so we cannot reject H0.
+- No evidence of heteroskedasticity in the errors of equation 1.
+
+2bi
+a) the sign of the slope coefficient is positive
+b) firms with small assets are tightly located around the
+regression line, while firms with bigger assets are located
+further away from the regression line. 
+So conditional variance is not constant for all observations.
+- with heteroskedasticty, OLS is still unbiased,
+but no longer BLUE, and the usual OLS se are no longer correct.
+This means that we cannot perform F and t tests based on
+these se.
+- log-log transformation is not possible as we have firms
+with negative profits.
+
+2bii
+Var(u|x)=s2=sigma^2
+
+- Var(W*u|x)=W2*Var(u|X)=(1/(assets))*Var(u|X) = s2
+If var(u|X)=assets*s2 we have constant variance in 
+the estimated equation, and the estimator is BLUE
+- In the weighted equation we have constant variance and therefore
+there is no heteroskedasticity. We also have the same parameters
+as in (6), so we can estimate the coefficients in a model
+without heteroskedasticity
+
+2biii
+
+- H0: b2=b3=0
+- Ha: at least one of them is not zero
+- F=((SSRr-SSRur)/q)/(SSRur/(n-k-1))
+- distribution under H0: F(q,n-k-1)
+- Fcalc=((27.95-25.32)/2)/(25.32/(69-3-1))=3.37
+- Fcrit=F(2,69-3-1)=4.98
+- test statistic is smaller than the critical value
+- We cannot reject H0, so there is evidence 
+that whether the manager is the owner or not matters in
+the relationship between profits and assets.
+
+3
+a)
+ut is white noise
+- E[ut]=0 for all t
+- Var[ut]=s2 for all t
+- Cov(ut,u(t+s))=0 for all t not equal to s
+ALSO CORRECT: ut is iid(0,s2)
+
+bi)
+ut is not white noise
+but is likely to be serially correlated,
+because the autocorrelations are 
+significantly different from zero.
+The pac suggest an AR(2) model for ut
+
+bii)
+ut = rho1*u(t-1)+rho2*u(t-2)+et
+
+-H0: rho1=rho2=0
+-Ha: at least on is not equal to zero
+
+Estimate (11) and construct uthat
+Auxiliarly regression: 
+Regress uthat on c, Pbeef, Pchicken, INC, t, 
+u(t-1)hat and u(t-2)hat
+
+-> uthat=a0+a1*Pbeef+a2*Pchicken+a3*INC+a4*t+a5*u(t-1)hat
++a6*u(t-2)hat+et
+Get R2aux
+
+- BG=(n-2)*R2aux
+- asymptotic distribution under H0: chi2(2)
+- if BGcalc>BGcrit, then we reject H0
+
+3biii
+Raux2=0.658
+
+calculate the test statistic: (n-q)*Raux2=(150-2)*0.658=97.384
+critical value: chi2(2)=5.99
+conclusion: BGcalc>BGcrit we reject the H0.
+There is significant serial correlation in the errors.
+
+3biv
+under serial correlation, OLS is still unbiased, but no longer BLUE.
+The standard formula for the standard errors is incorrect.
+We can use HAC standard errors. 
